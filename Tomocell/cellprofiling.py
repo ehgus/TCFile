@@ -21,13 +21,30 @@ def Cellmask(img:np.ndarray):
 
     return label(_b_cellmask)
 
-def cellprofiling(img, cellmask, cellcnt, bgRI, Volpix):
+def cellprofiling(img, cellmask, cellcnt, bgRI, Volpix, **constrants):
     '''
     img should contain RI information
     '''
     lbls = np.arange(1,cellcnt+1)
-    return [
-        center_of_mass(img, cellmask, lbls),
-        labeled_comprehension(img - bgRI, cellmask, lbls, lambda x: np.sum(x)/0.185,float, None), # dry mass
-        [np.count_nonzero(cellmask == lbl)*Volpix for lbl in lbls],
-    ]
+    volume = np.array([np.count_nonzero(cellmask == lbl)*Volpix for lbl in lbls]) # (μm)^D (D:dimensions)
+    if 'minvol' in constrants.keys():
+        limit = volume > constrants['minvol']
+        volume = volume[limit]
+        lbls = lbls[limit]
+    if 'minvol' in constrants.keys():
+        limit = volume < constrants['minvol']
+        volume = volume[limit]
+        lbls = lbls[limit]
+
+    drymass = labeled_comprehension(img - bgRI, cellmask, lbls, lambda x: np.sum(x)/0.185,float, None) # pg
+    if 'mindm' in constrants.keys():
+        limit = drymass > constrants['mindm']
+        drymass = drymass[limit]
+        lbls = lbls[limit]
+    if 'mindm' in constrants.keys():
+        limit = drymass < constrants['mindm']
+        drymass = drymass[limit]
+        lbls = lbls[limit]
+
+    CM = center_of_mass(img, cellmask, lbls)
+    return CM, volume, drymass

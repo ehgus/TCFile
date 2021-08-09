@@ -1,5 +1,13 @@
 from distutils.core import setup
 
+install_requires=[
+    'numpy>=1.18.5',
+    'scipy>=1.7.0',
+    'scikit-image>0.18.2',
+    'h5py>=3.2.0',
+    'matplotlib>=3.4.0',
+]
+
 setup(name = 'TCFtools',
       version = '0.1.0',
       description = 'Python TCFdata utilities',
