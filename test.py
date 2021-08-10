@@ -8,7 +8,7 @@ for i in x:
 # test2
 data = x[0]
 cellmask, cellcnt = Cellmask(data)
-cellprofiling(data, cellmask, cellcnt, 1.337, x.Volpix)
+cellproperties(data, cellmask, cellcnt, 1.337, x.Volpix,minvol=200)
 
 #test3
 fig, ax = plt.subplots()

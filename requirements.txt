@@ -3,3 +3,4 @@ scipy>=1.7.0
 scikit-image>0.18.2
 h5py>=3.2.0
 matplotlib>=3.4.0
+multimethod>=1.4

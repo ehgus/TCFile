@@ -6,6 +6,7 @@ install_requires=[
     'scikit-image>0.18.2',
     'h5py>=3.2.0',
     'matplotlib>=3.4.0',
+    'multimethod>=1.4',
 ]
 
 setup(name = 'TCFtools',
