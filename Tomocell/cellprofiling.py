@@ -1,6 +1,5 @@
-from scipy.spatial import distance
 from skimage import filters
-from scipy.ndimage import binary_dilation, binary_erosion, binary_fill_holes, label, labeled_comprehension, center_of_mass
+import scipy.ndimage as ndi
 from scipy.spatial.distance import cdist
 import numpy as np
 import warnings
@@ -21,12 +20,12 @@ def _default_cellmask(img:np.ndarray):
     _b_cellmask = img > otsu_val
     _b2_cellmask = np.empty(_b_cellmask, dtype = _b_cellmask.dtype)
     # bottleneck!
-    binary_erosion(_b_cellmask, structure=kernel, output = _b2_cellmask)
-    binary_dilation(_b2_cellmask, structure=kernel2, output = _b_cellmask)
-    binary_fill_holes(_b_cellmask, output = _b2_cellmask)
-    binary_erosion(_b2_cellmask, structure=kernel, output = _b_cellmask)
+    ndi.binary_erosion(_b_cellmask, structure=kernel, output = _b2_cellmask)
+    ndi.binary_dilation(_b2_cellmask, structure=kernel2, output = _b_cellmask)
+    ndi.binary_fill_holes(_b_cellmask, output = _b2_cellmask)
+    ndi.binary_erosion(_b2_cellmask, structure=kernel, output = _b_cellmask)
 
-    cellmask, lbl = label(_b_cellmask)
+    cellmask, lbl = ndi.label(_b_cellmask)
     return cellmask, lbl
 
 def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _default_cellmask, **constrants):
@@ -53,7 +52,7 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
         Volume = Volume[limit]
         lbls = lbls[limit]
 
-    Drymass = labeled_comprehension(img - bgRI, cellmask, lbls, lambda x: np.sum(x)/0.185,float, None) # pg
+    Drymass = ndi.labeled_comprehension(img - bgRI, cellmask, lbls, lambda x: np.sum(x)/0.185,float, None) # pg
     if 'mindm' in constrants.keys():
         limit = Drymass > constrants['mindm']
         Drymass = Drymass[limit]
@@ -63,7 +62,7 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
         Drymass = Drymass[limit]
         lbls = lbls[limit]
 
-    CenterOfMass = center_of_mass(img, cellmask, lbls)
+    CenterOfMass = ndi.center_of_mass(img, cellmask, lbls)
 
     return [TCFcell(cm, vol, dm, tcfname, index) for cm,vol, dm in zip(CenterOfMass, Volume, Drymass)]
 

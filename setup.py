@@ -10,7 +10,7 @@ install_requires=[
 ]
 
 setup(name = 'TCFtools',
-      version = '0.1.0',
+      version = '2021-08-10',
       description = 'Python TCFdata utilities',
       long_description = 'Python package for handling TCF data. It works with Tomcube data',
       author = 'Dohyeon Lee',
