@@ -35,12 +35,3 @@ class Slice3dviewer:
         self.im.set_data(self.data[tuple(self.sliceind)])
         #self.ax.set_ylabel('slice %s' % self.ind)
         self.im.axes.figure.canvas.draw_idle()
-
-'''
-if __name__ == '__main__':
-    fig, ax = plt.subplots()
-    with h5py.File('20210723-Microchip-Tlapse/20210723.175348.933.HanYang_uchip_WBC-007/20210723.175348.933.HanYang_uchip_WBC-007.TCF') as f:
-        data = f['Data/3D/000000'][:]
-    tracker = Slice3dviewer(data, ax)
-    plt.show()
-'''

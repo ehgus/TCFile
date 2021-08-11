@@ -9,16 +9,16 @@ def __diamond_kernel(r, dim):
     return np.fromfunction(kernelfunc, tuple(2*r+1 for _ in range(dim)), dtype = int)
 
 def _default_cellmask(img:np.ndarray):
-    kernel = __diamond_kernel(2,len(img.shape))
-    kernel2 = __diamond_kernel(4,len(img.shape))
+    kernel = __diamond_kernel(1,len(img.shape))
     otsu_val = filters.threshold_otsu(img)
     _b_cellmask = img > otsu_val
     _b2_cellmask = np.empty_like(_b_cellmask, dtype = _b_cellmask.dtype)
     # bottleneck!
-    ndi.binary_erosion(_b_cellmask, structure=kernel, output = _b2_cellmask)
-    ndi.binary_dilation(_b2_cellmask, structure=kernel2, output = _b_cellmask)
+    # see this issues before you modify the next codes: https://github.com/scipy/scipy/issues/13991#issuecomment-839853868
+    ndi.binary_erosion(_b_cellmask, structure=kernel, iterations = 2, output = _b2_cellmask)
+    ndi.binary_dilation(_b2_cellmask, structure=kernel, iterations = 4, output = _b_cellmask)
     ndi.binary_fill_holes(_b_cellmask, output = _b2_cellmask)
-    ndi.binary_erosion(_b2_cellmask, structure=kernel, output = _b_cellmask)
+    ndi.binary_erosion(_b2_cellmask, structure=kernel, iterations = 2, output = _b_cellmask)
 
     cellmask, lbl = ndi.label(_b_cellmask)
     return cellmask, lbl
