@@ -15,7 +15,7 @@ cellproperties(data, cellmask, cellcnt, 1.337, x.Volpix,minvol=200)
 #test3
 fig, ax = plt.subplots(); Slice3dviewer(data, ax); plt.show()
 
-#test4
+#test4: 73s -> 45s
 tic=time(); tcfcells_t = [get_celldata(x, i, mindm=30) for i in range(len(x))]; toc =time();print(toc-tic)
 
 #test5

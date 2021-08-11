@@ -24,12 +24,12 @@ def _default_cellmask(img:np.ndarray):
     cellmask, lbl = ndi.label(_b_cellmask)
     return cellmask, lbl
 
-def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _default_cellmask, **constrants):
+def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _default_cellmask,rtn_cellmask = False, **constrants):
     '''
     img should contain RI information
     '''
     # get basic data
-    data = tcfile[index]
+    data = tcfile[index]/1e4 - bgRI
     Volpix = tcfile.Volpix
     tcfname = tcfile.TCFname
     resol = tcfile.resol
@@ -48,7 +48,7 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
         Volume = Volume[limit]
         lbls = lbls[limit]
 
-    Drymass = ndi.labeled_comprehension(data/1e4 - bgRI, cellmask, lbls, lambda x: np.sum(x)*(Volpix/0.185),float, None) # pg
+    Drymass = ndi.labeled_comprehension(data, cellmask, lbls, lambda x: np.sum(x)*Volpix/0.185,float, None) # pg
     if 'mindm' in constrants.keys():
         limit = Drymass > constrants['mindm']
         Drymass = Drymass[limit]
@@ -59,8 +59,13 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
         lbls = lbls[limit]
 
     CenterOfMass = ndi.center_of_mass(data, cellmask, lbls)
+    tcfcells = [TCFcell(cm, resol, vol, dm, tcfname, index) for cm,vol, dm in zip(CenterOfMass, Volume, Drymass)]
+    if rtn_cellmask:
+        for tcfcell,idx in zip(tcfcells, lbls):
+            tcfcellmask = (cellmask== idx)
+            tcfcell['mask'] = tcfcellmask
 
-    return [TCFcell(cm, resol, vol, dm, tcfname, index) for cm,vol, dm in zip(CenterOfMass, Volume, Drymass)]
+    return tcfcells
 
 def _default_connectivity(bf_tcfcells:List[TCFcell], af_tcfcells:List[TCFcell]) -> List[Union[TCFcell, None]]:
     '''
@@ -68,8 +73,8 @@ def _default_connectivity(bf_tcfcells:List[TCFcell], af_tcfcells:List[TCFcell]) 
     Assumption: space b/w the Ceter of cells is large enough compared
     to its movement given time interval.
     '''
-    bf_cm = np.array([x.CM for x in bf_tcfcells])
-    af_cm = np.array([x.CM for x in af_tcfcells])
+    bf_cm = np.array([x['CM'] for x in bf_tcfcells])
+    af_cm = np.array([x['CM'] for x in af_tcfcells])
     distance = cdist(bf_cm, af_cm)
     connectivity = list(np.argmin(distance, axis=0)) # af(key) -> bf(val)
     return connectivity

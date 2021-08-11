@@ -26,7 +26,7 @@ class TCFile:
             self.len = getAttr('DataCount')
             self.shape = tuple(getAttr(f'Size{idx}') for idx in  ('Z', 'Y', 'X'))
             self.resol = tuple(getAttr(f'Resolution{idx}') for idx in  ('Z', 'Y', 'X'))
-            self.Volpix = np.prod(self.resol) #  # (μm)^D (D:dimensions)
+            self.Volpix = np.prod(self.resol) # (μm)^D (D:dimensions)
             self.dt = 0 if self.len == 1 else getAttr('TimeInterval') # s
     
     def __getitem__ (self, key:int) -> np.ndarray:
@@ -45,20 +45,21 @@ class TCFcell:
 
     @multimethod
     def __init__(self, CM:tuple,resol:tuple, volume:float, drymass:float, tcfname:str, idx:int):
-        self.CM = CM
-        self.volume = volume
-        self.drymass = drymass
-        self.resol = resol
+        self.cellproperties = {
+            'CM':CM,
+            'volume':volume,
+            'drymass':drymass,
+            'resol':resol,
+        }
         # attributes
         self.tcfname = tcfname
         self.idx = idx
     
     @multimethod
     def __init__(self, f:h5py._hl.group.Group, tcfname:str, idx:int):
-        self.CM = f['CM'][:]
-        self.resol = f['resol'][:]
-        self.volume = f['volume'][()]
-        self.drymass = f['drymass'][()]
+        self.cellproperties = dict()
+        for key in f.keys():
+            self[key] = f[key][()]
         # attributes
         self.tcfname = tcfname
         self.idx = idx
@@ -69,19 +70,28 @@ class TCFcell:
             if f.attrs['type'] == 'TCFcell':
                 self.tcfname = f.attrs['tcfname']
                 self.idx = f.attrs['idx']
-                self.CM = f['CM'][:]
-                self.resol = f['resol'][:]
-                self.volume = f['volume'][()]
-                self.drymass = f['drymass'][()]
+                self.cellproperties = dict()
+                for key in f.keys():
+                    self[key] = f[key][()]
             else:
                 NameError('The file does not support TCFcell')
 
+    def __getitem__(self, key:str):
+        return self.cellproperties[key]
     
+    def __setitem__(self, key:str, item):
+        self.cellproperties[key] = item
+    
+    def keys(self):
+        return self.cellproperties.keys()
 
     def __repr__(self) -> str:
-        data_repr = (f'Center of Mass: ({",".join(["{0:.2f} ".format(v) for v in self.CM])}) pixel\n'
-                     f'volume: {repr(self.volume)} μm³\n'
-                     f'dry mass: {repr(self.drymass)} pg\n')
+        CM = self['CM']
+        volume = self['volume']
+        drymass = self['drymass']
+        data_repr = (f'Center of Mass: ({",".join(["{0:.2f} ".format(v) for v in CM])}) pixel\n'
+                     f'volume: {volume} μm³\n'
+                     f'dry mass: {drymass} pg\n')
         return data_repr
     
     def save(self, fname:str):
@@ -89,10 +99,8 @@ class TCFcell:
             f.attrs['type'] = 'TCFcell'
             f.attrs['tcfname'] = self.tcfname
             f.attrs['idx'] = self.idx
-            f.create_dataset('volume', data = self.volume)
-            f.create_dataset('drymass', data = self.drymass)
-            f.create_dataset('CM', data = self.CM)
-            f.create_dataset('resol', data = self.resol)
+            for key in self.keys():
+                f.create_dataset(key, data = self[key])
 
 class TCFcell_t:
 
@@ -138,11 +146,9 @@ class TCFcell_t:
             f.attrs['type'] = 'TCFcell_t'
             f.attrs['tcfname'] = self.tcfname
             f.attrs['len'] = len(self)
-            for i in range(len(self)):
-                if self.tcfcells[i] is None:
+            for (i,tcfcell) in enumerate(self.tcfcells):
+                if tcfcell is None:
                     continue
-                id = f'{i:06d}'
-                f.create_dataset(f'{id}/volume', data = self.tcfcells[i].volume)
-                f.create_dataset(f'{id}/drymass', data = self.tcfcells[i].drymass)
-                f.create_dataset(f'{id}/CM', data = self.tcfcells[i].CM)
-                f.create_dataset(f'{id}/resol', data = self.tcfcells[i].resol)
+                grp =f.create_group(f'{i:06d}')
+                for key in tcfcell.keys():
+                    grp.create_dataset(key, data = tcfcell[key])
