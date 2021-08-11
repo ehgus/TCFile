@@ -9,8 +9,8 @@ install_requires=[
     'multimethod>=1.4',
 ]
 
-setup(name = 'TCFtools',
-      version = '2021-08-10',
+setup(name = 'Tomocell',
+      version = '0.1.0',
       description = 'Python TCFdata utilities',
       long_description = 'Python package for handling TCF data. It works with Tomcube data',
       author = 'Dohyeon Lee',

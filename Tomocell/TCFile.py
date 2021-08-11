@@ -4,7 +4,7 @@ from typing import List, Union
 from multimethod import multimethod
 
 class TCFile:
-    def __init__(self, TCFname:str, dtype:str) -> None:
+    def __init__(self, TCFname:str, dtype:str):
         '''
         object that ease the TCF data manupulation
 
@@ -43,7 +43,8 @@ class TCFile:
         
 class TCFcell:
 
-    def __init__(self, CM:tuple,resol:tuple, volume:float, drymass:float, tcfname:str, idx:int) -> None:
+    @multimethod
+    def __init__(self, CM:tuple,resol:tuple, volume:float, drymass:float, tcfname:str, idx:int):
         self.CM = CM
         self.volume = volume
         self.drymass = drymass
@@ -52,7 +53,18 @@ class TCFcell:
         self.tcfname = tcfname
         self.idx = idx
     
-    def __init__(self, fname:str) -> None:
+    @multimethod
+    def __init__(self, f:h5py._hl.files.File, tcfname:str, idx:int):
+        self.CM = f['CM'][:]
+        self.volume = f['volume'][:]
+        self.drymass = f['drymass'][:]
+        self.resol = f['resol'][:]
+        # attributes
+        self.tcfname = tcfname
+        self.idx = idx
+
+    @multimethod
+    def __init__(self, fname:str):
         with h5py.File(fname,'r') as f:
             if f.attrs['type'] == 'TCFcell':
                 self.tcfname = f.attrs['tcfname']
@@ -64,20 +76,12 @@ class TCFcell:
             else:
                 NameError('The file does not support TCFcell')
 
-    def __init__(self, f:h5py._hl.files.File, tcfname, idx) -> None:
-        self.CM = f['CM'][:]
-        self.volume = f['volume'][:]
-        self.drymass = f['drymass'][:]
-        self.resol = f['resol'][:]
-        # attributes
-        self.tcfname = tcfname
-        self.idx = idx
-        pass
+    
 
     def __repr__(self) -> str:
-        data_repr = (f'Center of Mass: {repr(self.CM)} pixel\n'
+        data_repr = (f'Center of Mass: ({",".join(["{0:.2f} ".format(v) for v in self.CM])}) pixel\n'
                      f'Volume: {repr(self.volume)} μm³\n'
-                     f'dry mass: {repr(self.drymass)} pg')
+                     f'dry mass: {repr(self.drymass)} pg\n')
         return data_repr
     
     def save(self, fname:str):
@@ -93,7 +97,7 @@ class TCFcell:
 class TCFcell_t:
 
     @multimethod
-    def __init__(self, tcfcells:List[TCFcell]) -> None:
+    def __init__(self, tcfcells:List[Union[TCFcell,None]]):
         '''
         validation
         - each tcfcells comes from the same tcfile with incrementing index (TODO)
@@ -103,20 +107,26 @@ class TCFcell_t:
         self.tcfname = tcfcells[0].tcfname
 
     @multimethod
-    def __init__(self, fname:str) -> None:
+    def __init__(self, fname:str):
         with h5py.File(fname,'r') as f:
             if f.attrs["type"] == 'TCFcell_t':
                 self.tcfname = f.attrs['tcfname']
                 self.len = f.attrs['len']
-                self.tcfcells = [TCFcell(f[f'{i:06d}'],self.tcfname,i) for i in range(self.len)]
+                self.tcfcells = [None] * self.len
+                for id in f.keys():
+                    i = int(id)
+                    self.tcfcells[i] = TCFcell(f[id],self.tcfname, i)
             else:
                 NameError('The file does not support TCFcell_t')
     
     def __getitem__(self, key:int) -> TCFcell:
         return self.tcfcells[key]
     
-    def __setitem__(self, key:int, item:TCFcell) -> None:
+    def __setitem__(self, key:int, item:TCFcell):
         self.tcfcells[key] = item
+    
+    def append(self,item:Union[TCFcell,None]):
+        self.tcfcells.append(item)
     
     def __len__(self) -> int:
         return self.len
@@ -127,6 +137,8 @@ class TCFcell_t:
             f.attrs['tcfname'] = self.tcfname
             f.attrs['len'] = self.len
             for i in range(self.len):
+                if self.tcfiles[i] is None:
+                    continue
                 id = f'{i:06d}'
                 f.create_dataset(f'{id}/Volume', data = self.tcfcells[i].volume)
                 f.create_dataset(f'{id}/Mass', data = self.tcfcells[i].drymass)
