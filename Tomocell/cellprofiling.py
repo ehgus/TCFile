@@ -2,6 +2,7 @@ from skimage import filters
 import scipy.ndimage as ndi
 from scipy.spatial.distance import cdist
 import numpy as np
+from warnings import warn
 from . import *
 
 def __diamond_kernel(r, dim):
@@ -88,7 +89,12 @@ def get_celldata_t(tcfcells_tlapse:List[List[TCFcell]], connectivity_func = _def
         bf_tcfcells = tcfcells_tlapse[i]
         af_tcfcells = tcfcells_tlapse[i+1]
         if len(bf_tcfcells) != len(af_tcfcells):
-            raise ValueError('number of cells are mismatched')
+            warn_msg = f'numbaer of cells are mismatched! next steps from {i}th component will be filled with None'
+            warn(warn_msg)
+            non_tcfcells = [None] * (len(tcfcells_tlapse)-1-i)
+            for tcfcell_t in tcfcell_t_stack:
+                tcfcell_t.extend(non_tcfcells)
+            break
         connectivity = [connectivity[bf] for bf in connectivity_func(bf_tcfcells,af_tcfcells)]
         for (cell_idx, cell_t_idx) in enumerate(connectivity):
             tcfcell_t_stack[cell_t_idx].append(af_tcfcells[cell_idx])

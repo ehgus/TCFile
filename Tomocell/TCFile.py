@@ -54,11 +54,11 @@ class TCFcell:
         self.idx = idx
     
     @multimethod
-    def __init__(self, f:h5py._hl.files.File, tcfname:str, idx:int):
+    def __init__(self, f:h5py._hl.group.Group, tcfname:str, idx:int):
         self.CM = f['CM'][:]
-        self.volume = f['volume'][:]
-        self.drymass = f['drymass'][:]
         self.resol = f['resol'][:]
+        self.volume = f['volume'][()]
+        self.drymass = f['drymass'][()]
         # attributes
         self.tcfname = tcfname
         self.idx = idx
@@ -70,9 +70,9 @@ class TCFcell:
                 self.tcfname = f.attrs['tcfname']
                 self.idx = f.attrs['idx']
                 self.CM = f['CM'][:]
-                self.volume = f['volume'][:]
-                self.drymass = f['drymass'][:]
                 self.resol = f['resol'][:]
+                self.volume = f['volume'][()]
+                self.drymass = f['drymass'][()]
             else:
                 NameError('The file does not support TCFcell')
 
@@ -80,7 +80,7 @@ class TCFcell:
 
     def __repr__(self) -> str:
         data_repr = (f'Center of Mass: ({",".join(["{0:.2f} ".format(v) for v in self.CM])}) pixel\n'
-                     f'Volume: {repr(self.volume)} μm³\n'
+                     f'volume: {repr(self.volume)} μm³\n'
                      f'dry mass: {repr(self.drymass)} pg\n')
         return data_repr
     
@@ -89,8 +89,8 @@ class TCFcell:
             f.attrs['type'] = 'TCFcell'
             f.attrs['tcfname'] = self.tcfname
             f.attrs['idx'] = self.idx
-            f.create_dataset('Volume', data = self.volume)
-            f.create_dataset('Mass', data = self.drymass)
+            f.create_dataset('volume', data = self.volume)
+            f.create_dataset('drymass', data = self.drymass)
             f.create_dataset('CM', data = self.CM)
             f.create_dataset('resol', data = self.resol)
 
@@ -103,7 +103,6 @@ class TCFcell_t:
         - each tcfcells comes from the same tcfile with incrementing index (TODO)
         '''
         self.tcfcells = tcfcells
-        self.len = len(tcfcells)
         self.tcfname = tcfcells[0].tcfname
 
     @multimethod
@@ -111,8 +110,8 @@ class TCFcell_t:
         with h5py.File(fname,'r') as f:
             if f.attrs["type"] == 'TCFcell_t':
                 self.tcfname = f.attrs['tcfname']
-                self.len = f.attrs['len']
-                self.tcfcells = [None] * self.len
+                length = f.attrs['len']
+                self.tcfcells = [None] * length
                 for id in f.keys():
                     i = int(id)
                     self.tcfcells[i] = TCFcell(f[id],self.tcfname, i)
@@ -128,19 +127,22 @@ class TCFcell_t:
     def append(self,item:Union[TCFcell,None]):
         self.tcfcells.append(item)
     
+    def extend(self,items:List[Union[TCFcell,None]]):
+        self.tcfcells.extend(items)
+    
     def __len__(self) -> int:
-        return self.len
+        return len(self.tcfcells)
 
     def save(self, fname:str):
         with h5py.File(fname,'w') as f:
             f.attrs['type'] = 'TCFcell_t'
             f.attrs['tcfname'] = self.tcfname
-            f.attrs['len'] = self.len
-            for i in range(self.len):
-                if self.tcfiles[i] is None:
+            f.attrs['len'] = len(self)
+            for i in range(len(self)):
+                if self.tcfcells[i] is None:
                     continue
                 id = f'{i:06d}'
-                f.create_dataset(f'{id}/Volume', data = self.tcfcells[i].volume)
-                f.create_dataset(f'{id}/Mass', data = self.tcfcells[i].drymass)
+                f.create_dataset(f'{id}/volume', data = self.tcfcells[i].volume)
+                f.create_dataset(f'{id}/drymass', data = self.tcfcells[i].drymass)
                 f.create_dataset(f'{id}/CM', data = self.tcfcells[i].CM)
                 f.create_dataset(f'{id}/resol', data = self.tcfcells[i].resol)
