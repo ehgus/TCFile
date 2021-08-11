@@ -82,6 +82,9 @@ class TCFcell:
     def __setitem__(self, key:str, item):
         self.cellproperties[key] = item
     
+    def __delitem__(self, key:str):
+        del self.cellproperties[key]
+    
     def keys(self):
         return self.cellproperties.keys()
 

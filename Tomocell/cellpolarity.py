@@ -18,16 +18,16 @@ def get_morphology(tcfcell:TCFcell):
     # find morphologies
     cellmask_slice = cellmask[opt_z,...].astype(np.uint8)
     cellmask_slice[cellmask_slice > 0] = 255
-    countour, _ = cv.findContours(cellmask_slice,1,2)
+    countour, hierarchy = cv.findContours(cellmask_slice,cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
     cnt = countour[0]
     
     center_rect = np.array(cv.minAreaRect(cnt)[0])
-    ellipse = cv.fitEllipse(cnt)
     polarity = (tcfcell['CM'][:2] - center_rect)*tcfcell['resol'][:2] # unit: μm
     tcfcell['polarity'] = polarity
-    
-    tcfcell['centerE'] = ellipse[0]
-    tcfcell['rotE'] = ellipse[2]
-    tcfcell['widthE'] = ellipse[1][0]
-    tcfcell['heightE'] = ellipse[1][1]
+    if len(cnt) > 5:
+        ellipse = cv.fitEllipse(cnt)
+        tcfcell['centerE'] = ellipse[0]
+        tcfcell['rotE'] = ellipse[2]
+        tcfcell['widthE'] = ellipse[1][0]
+        tcfcell['heightE'] = ellipse[1][1]
 
