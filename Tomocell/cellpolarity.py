@@ -21,9 +21,10 @@ def get_morphology(tcfcell:TCFcell):
     countour, hierarchy = cv.findContours(cellmask_slice,cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
     cnt = countour[0]
     
-    center_rect = np.array(cv.minAreaRect(cnt)[0])
-    polarity = (tcfcell['CM'][:2] - center_rect)*tcfcell['resol'][:2] # unit: μm
-    tcfcell['polarity'] = polarity
+    center_rect,size_rect,angle_rect = cv.minAreaRect(cnt) # angle is in degree
+    tcfcell['centerR'] = center_rect
+    tcfcell['sizeR'] = size_rect
+    tcfcell['angleR'] = angle_rect
     if len(cnt) > 5:
         ellipse = cv.fitEllipse(cnt)
         tcfcell['centerE'] = ellipse[0]

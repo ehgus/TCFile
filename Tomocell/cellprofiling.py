@@ -5,7 +5,7 @@ import numpy as np
 from warnings import warn
 from . import *
 
-def __diamond_kernel(r, dim):
+def __diamond_kernel(r, dim) -> np.ndarray:
     kernelfunc = lambda *args: sum([np.abs(idx-r) for idx in args]) <= r
     return np.fromfunction(kernelfunc, tuple(2*r+1 for _ in range(dim)), dtype = int)
 
@@ -24,7 +24,7 @@ def _default_cellmask(img:np.ndarray):
     cellmask, lbl = ndi.label(_b_cellmask)
     return cellmask, lbl
 
-def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _default_cellmask,rtn_cellmask = False, **constrants):
+def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _default_cellmask,rtn_cellmask = False, **constrants) -> List[TCFcell]:
     '''
     img should contain RI information
     '''
@@ -67,7 +67,7 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
 
     return tcfcells
 
-def _default_connectivity(bf_tcfcells:List[TCFcell], af_tcfcells:List[TCFcell]) -> List[Union[TCFcell, None]]:
+def _default_connectivity(bf_tcfcells:List[TCFcell], af_tcfcells:List[TCFcell]) -> List[int]:
     '''
     input: list of TCFcells
     Assumption: space b/w the Ceter of cells is large enough compared
@@ -79,7 +79,7 @@ def _default_connectivity(bf_tcfcells:List[TCFcell], af_tcfcells:List[TCFcell]) 
     connectivity = list(np.argmin(distance, axis=0)) # af(key) -> bf(val)
     return connectivity
 
-def get_celldata_t(tcfcells_tlapse:List[List[TCFcell]], connectivity_func = _default_connectivity):
+def get_celldata_t(tcfcells_tlapse:List[List[TCFcell]], connectivity_func = _default_connectivity) -> List[TCFcell_t]:
     '''
     tcfcells_tlapse: list of (each time point) list of (each cells) TCFcells
     return multiple TCFcell_t
@@ -94,7 +94,8 @@ def get_celldata_t(tcfcells_tlapse:List[List[TCFcell]], connectivity_func = _def
         bf_tcfcells = tcfcells_tlapse[i]
         af_tcfcells = tcfcells_tlapse[i+1]
         if len(bf_tcfcells) != len(af_tcfcells):
-            warn_msg = f'numbaer of cells are mismatched! next steps from {i}th component will be filled with None'
+            warn_msg = (f'number of cells are mismatched! next steps from {i}th component will be filled with None \n'
+                        f'file name: {bf_tcfcells[0].tcfname}')
             warn(warn_msg)
             non_tcfcells = [None] * (len(tcfcells_tlapse)-1-i)
             for tcfcell_t in tcfcell_t_stack:

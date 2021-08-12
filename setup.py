@@ -7,6 +7,7 @@ install_requires=[
     'h5py>=3.2.0',
     'matplotlib>=3.4.0',
     'multimethod>=1.4',
+    'opencv-python>=4.5.0'
 ]
 
 setup(name = 'Tomocell',
@@ -22,4 +23,5 @@ setup(name = 'Tomocell',
           "Programming Language :: Python :: 3.9",
       ],
       license = 'MIT',
+      install_requires = install_requires,
       )
