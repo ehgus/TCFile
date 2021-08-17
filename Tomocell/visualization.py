@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
-from matplotlib.patches import Arrow,Circle
+from matplotlib.patches import Arrow, Circle, Ellipse, Rectangle
 
 class slice3dviewer:
     def __init__(self, data, data_ax, title = '',z = 0):
@@ -39,16 +39,26 @@ class slice3dviewer:
 
 
     def add_point(self,point,z,radius =3,color='purple'):
-        circle = Circle(point,radius=radius, color=color)
+        circle = Circle(point,radius=radius, color=color,visible=False)
         p = self.ax.add_patch(circle)
-        p.set_visible(False)
         self.patches[z].append(p)
         self.active_patches.append(p)
 
     def add_arrow(self,start,end,z,width=4,color='red'):
-        arrow = Arrow(start[0],start[1],end[0],end[1],width=width,color='red')
+        arrow = Arrow(start[0],start[1],end[0],end[1],width=width,color=color,visible=False)
         p = self.ax.add_patch(arrow)
-        p.set_visible(False)
+        self.patches[z].append(p)
+        self.active_patches.append(p)
+    
+    def add_ellipse(self,xy,width,height,angle,z,color='green'):
+        ellipse = Ellipse(xy, width, height, angle, color=color,visible=False,fill=False)
+        p = self.ax.add_patch(ellipse)
+        self.patches[z].append(p)
+        self.active_patches.append(p)
+    
+    def add_rect(self,xy,width,height,angle,z,color='blue'):
+        rect = Rectangle(xy, width, height, angle, color=color,visible=False,fill=False)
+        p = self.ax.add_patch(rect)
         self.patches[z].append(p)
         self.active_patches.append(p)
 
