@@ -38,7 +38,7 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
     lbls = np.arange(1,lbl+1)
 
     # evaluate physical parameters
-    Volume = np.array([np.count_nonzero(cellmask == lbl)*Volpix for lbl in lbls]) # (μm)^D (D:dimensions)
+    Volume = np.fromiter((np.count_nonzero(cellmask == lbl)*Volpix for lbl in lbls),float) # (μm)^D (D:dimensions)
     if 'minvol' in constrants.keys():
         limit = Volume > constrants['minvol']
         Volume = Volume[limit]
@@ -57,8 +57,16 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
         limit = Drymass < constrants['maxdm']
         Drymass = Drymass[limit]
         lbls = lbls[limit]
+    
+    def _center_of_mass(data):
+        indices = (np.arange(1,input.ndim+1).reshape(-1,1) + np.arange(input.ndim-1).reshape(1,-1))%input.ndim
+        partial_sum = [np.sum(data,tuple(idx)) for idx in index]
+        norm = np.sum(partial_sum[0])
+        grids = [np.arange(size) for size in input.shape]
+        result = [np.sum(idx_sum*grid)/norm for idx_sum,grid in zip(partial_sum, grids)]
+        return result
 
-    CenterOfMass = ndi.center_of_mass(data, cellmask, lbls)
+    CenterOfMass = ndi.labeled_comprehension(data, cellmask, lbls, _center_of_mass, float, None) # pixel
     tcfcells = [TCFcell(cm, resol, vol, dm, tcfname, index) for cm,vol, dm in zip(CenterOfMass, Volume, Drymass)]
     if rtn_cellmask:
         for tcfcell,idx in zip(tcfcells, lbls):
