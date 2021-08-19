@@ -24,7 +24,7 @@ def _default_cellmask(img:np.ndarray):
     cellmask, lbl = ndi.label(_b_cellmask)
     return cellmask, lbl
 
-def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _default_cellmask,rtn_cellmask = False, **constrants) -> List[TCFcell]:
+def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _default_cellmask,rtn_cellmask = False, **constraints) -> List[TCFcell]:
     '''
     img should contain RI information
     '''
@@ -39,34 +39,33 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
 
     # evaluate physical parameters
     Volume = np.fromiter((np.count_nonzero(cellmask == lbl)*Volpix for lbl in lbls),float) # (μm)^D (D:dimensions)
-    if 'minvol' in constrants.keys():
-        limit = Volume > constrants['minvol']
+    if 'minvol' in constraints.keys():
+        limit = Volume > constraints['minvol']
         Volume = Volume[limit]
         lbls = lbls[limit]
-    if 'maxvol' in constrants.keys():
-        limit = Volume < constrants['maxvol']
+    if 'maxvol' in constraints.keys():
+        limit = Volume < constraints['maxvol']
         Volume = Volume[limit]
         lbls = lbls[limit]
 
     Drymass = ndi.labeled_comprehension(data, cellmask, lbls, lambda x: np.sum(x)*Volpix/0.185,float, None) # pg
-    if 'mindm' in constrants.keys():
-        limit = Drymass > constrants['mindm']
+    if 'mindm' in constraints.keys():
+        limit = Drymass > constraints['mindm']
         Drymass = Drymass[limit]
         lbls = lbls[limit]
-    if 'maxdm' in constrants.keys():
-        limit = Drymass < constrants['maxdm']
+    if 'maxdm' in constraints.keys():
+        limit = Drymass < constraints['maxdm']
         Drymass = Drymass[limit]
         lbls = lbls[limit]
     
     def _center_of_mass(data):
-        indices = (np.arange(1,input.ndim+1).reshape(-1,1) + np.arange(input.ndim-1).reshape(1,-1))%input.ndim
-        partial_sum = [np.sum(data,tuple(idx)) for idx in index]
+        indices = (np.arange(1,data.ndim+1).reshape(-1,1) + np.arange(data.ndim-1).reshape(1,-1))%data.ndim
+        partial_sum = [np.sum(data,tuple(idx)) for idx in indices]
         norm = np.sum(partial_sum[0])
-        grids = [np.arange(size) for size in input.shape]
+        grids = [np.arange(size) for size in data.shape]
         result = [np.sum(idx_sum*grid)/norm for idx_sum,grid in zip(partial_sum, grids)]
-        return result
-
-    CenterOfMass = ndi.labeled_comprehension(data, cellmask, lbls, _center_of_mass, float, None) # pixel
+        return tuple(result)
+    CenterOfMass = [_center_of_mass(data*(cellmask==lbl)) for lbl in lbls]
     tcfcells = [TCFcell(cm, resol, vol, dm, tcfname, index) for cm,vol, dm in zip(CenterOfMass, Volume, Drymass)]
     if rtn_cellmask:
         for tcfcell,idx in zip(tcfcells, lbls):
