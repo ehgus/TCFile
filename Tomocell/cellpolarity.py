@@ -2,14 +2,25 @@ import numpy as np
 from numpy.core.numeric import zeros_like
 from scipy.ndimage.measurements import center_of_mass
 import cv2 as cv
+import scipy.ndimage as ndi
 from . import *
 
 def get_morphology(tcfcell:TCFcell):
+    # get cellmask slice
     cellmask = tcfcell['mask']
-
-    # find morphologies
-    cellmask_slice = cellmask[cellmask.shape[0]//2,...].astype(np.uint8)
+    def _itr_or(array):
+        # boolean array
+        z = array.shape[0]
+        if z == 1:
+            return np.squeeze(array,0)
+        if z == 2:
+            return np.logical_or(array[0,:,:],array[1,:,:],out=array[0,:,:])
+        else:
+            zhalf = z//2
+            return np.logical_or(_itr_or(array[:zhalf]),_itr_or(array[zhalf:]))
+    cellmask_slice = ndi.binary_fill_holes(_itr_or(cellmask)).astype(np.uint8)
     cellmask_slice[cellmask_slice > 0] = 255
+    # find morphologies
     countour, hierarchy = cv.findContours(cellmask_slice,cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
     cnt = countour[0]
     
