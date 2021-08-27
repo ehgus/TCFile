@@ -29,7 +29,7 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
     img should contain RI information
     '''
     # get basic data
-    data = tcfile[index]/1e4 - bgRI
+    data = tcfile[index] - bgRI
     Volpix = tcfile.Volpix
     tcfname = tcfile.TCFname
     resol = tcfile.resol
