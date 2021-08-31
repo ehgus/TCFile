@@ -3,7 +3,9 @@ import scipy.ndimage as ndi
 from scipy.spatial.distance import cdist
 import numpy as np
 from warnings import warn
-from . import *
+from .. import *
+
+from typing import List
 
 def __diamond_kernel(r, dim) -> np.ndarray:
     kernelfunc = lambda *args: sum([np.abs(idx-r) for idx in args]) <= r

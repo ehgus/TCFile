@@ -1,3 +1,3 @@
-from .TCFile import *
-from .visualization import *
-from .cellprofiling import *
+from .TCFhandler import TCFile, TCFcell, TCFcell_t
+from .plot import *
+from .analysis import *

@@ -3,7 +3,7 @@ from numpy.core.numeric import zeros_like
 from scipy.ndimage.measurements import center_of_mass
 import cv2 as cv
 import scipy.ndimage as ndi
-from . import *
+from .. import *
 
 def get_morphology(tcfcell:TCFcell):
     # get cellmask slice
