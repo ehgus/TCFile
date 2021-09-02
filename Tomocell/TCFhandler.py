@@ -37,7 +37,7 @@ class _BasicTCFile:
     def __getitem__(self, key):
         if key >= self.length:
             raise IndexError(f'{TCFile.__name__} index out of range')
-        with h5py.File(self.TCFname) as f:
+        with h5py.File(self.tcfname) as f:
             data = f[f'Data/{self.imgtype.value}/{key:06d}'][()]
         return data
     
@@ -48,11 +48,13 @@ class TCFile(_BasicTCFile):
 
     def __init__(self, tcfname:str, imgtype:str, dtype=np.float32):
         super().__init__(tcfname, imgtype)
-        self.raw = super()
         self.dtype = dtype
+    
+    def getrawdata(self, key) -> np.ndarray:
+        return super().__getitem__(key)
 
     def __getitem__ (self, key) -> np.ndarray:
-        data = self.raw[key].astype(self.dtype)
+        data = self.getrawdata(key).astype(self.dtype)
         data /= 1e4
         return data
 

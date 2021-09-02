@@ -7,7 +7,8 @@ install_requires=[
     'h5py>=3.2.0',
     'matplotlib>=3.4.0',
     'multimethod>=1.4',
-    'opencv-python>=4.5.0'
+    'opencv-python>=4.5.0',
+    'pytest>=6.2'
 ]
 
 setup(name = 'Tomocell',
