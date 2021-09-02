@@ -2,140 +2,150 @@ import h5py
 import numpy as np
 from typing import List, Union
 from multimethod import multimethod
+from enum import Enum
 
-class TCFile:
+class _ImgDim(Enum):
+    TwoD = '2D'
+    ThreeD = '3D'
     
-
-    class TCFile_raw:
-        def __init__(self, TCFname:str, imgtype:str, length:int):
-            self.TCFname=TCFname
-            self.imgtype=imgtype
-            self.length = length
-        
-        def __getitem__(self, key):
-            if key >= self.length:
-                raise IndexError(f'{TCFile.__name__} index out of range')
-            with h5py.File(self.TCFname) as f:
-                data = f[f'Data/{self.imgtype}/{key:06d}'][()]
-            return data
-        
-        def __len__(self):
-            return self.length
-
-    def __init__(self, TCFname:str, imgtype:str, dtype=np.float32):
-        '''
-        object that ease the TCF data manupulation
-
-        validation checkstep
-        - imgtype validation
-            - only support "2D" and "3D"
-            - check whether if the imgtype is supported in the TCFile
-        '''
-        if imgtype == '2D':
-            _imgtype = 1
-        elif imgtype == '3D':
-            _imgtype = 0
+    def intval(self) -> int:
+        if self is _ImgDim.TwoD:
+            return 2
         else:
-            raise ValueError('imgtype only support "2D" and "3D"')
+            return 3
 
-        self.TCFname=TCFname
-        self.imgtype=imgtype
-        self.dtype = dtype
+class _BasicTCFile:
+
+    def __init__(self, tcfname:str, imgtype:str):
+            self.tcfname=tcfname
+            if imgtype in _ImgDim._value2member_map_.keys():
+                self.imgtype=_ImgDim(imgtype)
+            else:
+                raise ValueError('imgtype only support "2D" and "3D"')
+            _idx = -self.imgtype.intval()
+
+            with h5py.File(tcfname) as f:
+                if imgtype not in f['Data']:
+                    raise ValueError('The TCFile does not support the suggested image type')
+                getAttr = lambda name: f[f'Data/{imgtype}'].attrs[name][0]
+                self.length = getAttr('DataCount')
+                self.shape = tuple(getAttr(f'Size{idx}') for idx in  ('Z', 'Y', 'X')[_idx:])
+                self.resol = tuple(getAttr(f'Resolution{idx}') for idx in  ('Z', 'Y', 'X')[_idx:])
+                self.Volpix = np.prod(self.resol) # (μm)^D (D:dimensions)
+                self.dt = 0 if self.length == 1 else getAttr('TimeInterval') # s
         
-        with h5py.File(TCFname) as f:
-            if imgtype not in f['Data']:
-                raise ValueError('The TCFile does not support the suggested image type')
-            getAttr = lambda name: f[f'Data/{imgtype}'].attrs[name][0]
-            length = getAttr('DataCount')
-            self.shape = tuple(getAttr(f'Size{idx}') for idx in  ('Z', 'Y', 'X')[_imgtype:])
-            self.resol = tuple(getAttr(f'Resolution{idx}') for idx in  ('Z', 'Y', 'X')[_imgtype:])
-            self.Volpix = np.prod(self.resol) # (μm)^D (D:dimensions)
-            self.dt = 0 if length == 1 else getAttr('TimeInterval') # s
+    def __getitem__(self, key):
+        if key >= self.length:
+            raise IndexError(f'{TCFile.__name__} index out of range')
+        with h5py.File(self.TCFname) as f:
+            data = f[f'Data/{self.imgtype.value}/{key:06d}'][()]
+        return data
+    
+    def __len__(self):
+        return self.length
 
-            self.raw = TCFile.TCFile_raw(TCFname,imgtype,length)
+class TCFile(_BasicTCFile):
+
+    def __init__(self, tcfname:str, imgtype:str, dtype=np.float32):
+        super().__init__(tcfname, imgtype)
+        self.raw = super()
+        self.dtype = dtype
 
     def __getitem__ (self, key) -> np.ndarray:
         data = self.raw[key].astype(self.dtype)
         data /= 1e4
         return data
 
-    def __len__(self) -> int:
-        return len(self.raw)
-        
-class TCFcell:
 
+
+class _basicTCFcell:
+    '''
+    It contains only data, not attributes
+    '''
     @multimethod
-    def __init__(self, CM:tuple,resol:tuple, volume:float, drymass:float, tcfname:str, idx:int):
-        self.cellproperties = {
-            'CM':CM,
-            'volume':volume,
-            'drymass':drymass,
-            'resol':resol,
-        }
-        # attributes
-        self.tcfname = tcfname
-        self.idx = idx
+    def __init__(self, CM:tuple, volume: float, drymass:float):
+        self.properties = dict(
+            CM = CM,
+            volume = volume,
+            dryamss = drymass
+        )
     
     @multimethod
-    def __init__(self, f:h5py._hl.group.Group, tcfname:str, idx:int):
-        self.cellproperties = dict()
+    def __init__(self, properties:dict):
+        self.properties = properties
+
+    @multimethod
+    def __init__(self, f:h5py._hl.group.Group):
+        self.properties = dict()
         for key in f.keys():
             self[key] = f[key][()]
+    
+    def __getitem__(self, key:str):
+        return self.properties[key]
+    
+    def __setitem__(self, key:str, item):
+        self.properties[key] = item
+    
+    def __delitem__(self, key:str):
+        del self.properties[key]
+    
+    def keys(self):
+        return self.properties.keys()
+    
+    def items(self):
+        return self.properties.items()
+
+    def save(self, io):
+        for key in self.keys():
+            io.create_dataset(key, data = self[key])
+            
+class TCFcell(_basicTCFcell):
+
+    @multimethod
+    def __init__(self, tcfile:TCFile, idx:int, **args):
+        super().__init__(**args)
         # attributes
-        self.tcfname = tcfname
+        self.tcfname = tcfile.tcfname
+        self.resol = tcfile.resol
+        self.imgtype = tcfile.imgtype
         self.idx = idx
 
     @multimethod
     def __init__(self, fname:str):
         with h5py.File(fname,'r') as f:
-            if f.attrs['type'] == 'TCFcell':
+            if  'type' in f.attrs.keys() and f.attrs['type'] == 'TCFcell':
+                super().__init__(f['/'])
+                # get attributes
                 self.tcfname = f.attrs['tcfname']
-                self.idx = f.attrs['idx']
-                self.cellproperties = dict()
-                for key in f.keys():
-                    self[key] = f[key][()]
+                self.idx = f.attrs['idx'][0]
+                self.resol = f.attrs['resol']
+                self.imgtype = f.attrs['imgtype']
             else:
                 NameError('The file does not support TCFcell')
-
-    def __getitem__(self, key:str):
-        return self.cellproperties[key]
-    
-    def __setitem__(self, key:str, item):
-        self.cellproperties[key] = item
-    
-    def __delitem__(self, key:str):
-        del self.cellproperties[key]
-    
-    def keys(self):
-        return self.cellproperties.keys()
-
-    def __repr__(self) -> str:
-        CM = self['CM']
-        volume = self['volume']
-        drymass = self['drymass']
-        data_repr = (f'Center of Mass: ({",".join(["{0:.2f} ".format(v) for v in CM])}) pixel\n'
-                     f'volume: {volume} μm³\n'
-                     f'dry mass: {drymass} pg\n')
-        return data_repr
     
     def save(self, fname:str):
         with h5py.File(fname,'w') as f:
+            super().save(f)
+            # set attributes
             f.attrs['type'] = 'TCFcell'
             f.attrs['tcfname'] = self.tcfname
+            f.attrs['imgtype'] = self.imgtype.value
             f.attrs['idx'] = self.idx
-            for key in self.keys():
-                f.create_dataset(key, data = self[key])
 
 class TCFcell_t:
 
     @multimethod
-    def __init__(self, tcfcells:List[Union[TCFcell,None]]):
+    def __init__(self, tcfcells:List[TCFcell]):
         '''
         validation
         - each tcfcells comes from the same tcfile with incrementing index (TODO)
         '''
-        self.tcfcells = tcfcells
+        
+
+        self.tcfcells = [_basicTCFcell(tcfcell.properties) if tcfcell is not None else None for tcfcell in tcfcells]
         self.tcfname = tcfcells[0].tcfname
+        self.len = len(TCFile(self.tcfname))
+        self.imgtype = '3D' if len(tcfcells[0]['CM']) == 3 else '2D'
 
     @multimethod
     def __init__(self, fname:str):
@@ -146,7 +156,7 @@ class TCFcell_t:
                 self.tcfcells = [None] * length
                 for id in f.keys():
                     i = int(id)
-                    self.tcfcells[i] = TCFcell(f[id],self.tcfname, i)
+                    self.tcfcells[i] = _basicTCFcell(f[id])
             else:
                 NameError('The file does not support TCFcell_t')
     

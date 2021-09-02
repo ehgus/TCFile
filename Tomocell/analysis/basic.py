@@ -1,11 +1,12 @@
+import enum
+from numpy.core.fromnumeric import argmin
 from skimage import filters
 import scipy.ndimage as ndi
 from scipy.spatial.distance import cdist
 import numpy as np
 from warnings import warn
+from typing import Union, List
 from .. import *
-
-from typing import List
 
 def __diamond_kernel(r, dim) -> np.ndarray:
     kernelfunc = lambda *args: sum([np.abs(idx-r) for idx in args]) <= r
@@ -68,6 +69,7 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
         result = [np.sum(idx_sum*grid)/norm for idx_sum,grid in zip(partial_sum, grids)]
         return tuple(result)
     CenterOfMass = [_center_of_mass(data*(cellmask==lbl)) for lbl in lbls]
+
     tcfcells = [TCFcell(cm, resol, vol, dm, tcfname, index) for cm,vol, dm in zip(CenterOfMass, Volume, Drymass)]
     if rtn_cellmask:
         for tcfcell,idx in zip(tcfcells, lbls):
@@ -76,17 +78,24 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
 
     return tcfcells
 
-def _default_connectivity(bf_tcfcells:List[TCFcell], af_tcfcells:List[TCFcell]) -> List[int]:
+def _default_connectivity(bf_tcfcells:List[TCFcell], af_tcfcells:List[TCFcell]) -> List[Union[int, None]]:
     '''
     input: list of TCFcells
     Assumption: space b/w the Ceter of cells is large enough compared
     to its movement given time interval.
     '''
+    if len(bf_tcfcells) == 0 or len(af_tcfcells) == 0:
+        return [None] * len(af_tcfcells)
     bf_cm = np.array([x['CM'] for x in bf_tcfcells])
     af_cm = np.array([x['CM'] for x in af_tcfcells])
     distance = cdist(bf_cm, af_cm)
-    connectivity = list(np.argmin(distance, axis=0)) # af(key) -> bf(val)
-    return connectivity
+    if len(af_cm) <= len(bf_cm):
+        connectivity = list(np.argmin(distance, axis=0))
+    else:
+        _connectivity = list(np.argmin(distance, axis=1))
+        connectivity = [_connectivity.index(i) if i in _connectivity else None for i in range(len(af_cm))]
+
+    return connectivity # af_tcfcells[idx] <-> bf_tcfcells[val]
 
 def get_celldata_t(tcfcells_tlapse:List[List[TCFcell]], connectivity_func = _default_connectivity) -> List[TCFcell_t]:
     '''
@@ -97,20 +106,23 @@ def get_celldata_t(tcfcells_tlapse:List[List[TCFcell]], connectivity_func = _def
 
     if They are ill distributed, then it will just find partial t cells
     '''
+    tcfcell_t_final = []
     tcfcell_t_stack = [TCFcell_t([tcfcell]) for tcfcell in tcfcells_tlapse[0]]
     connectivity = list(range(len(tcfcell_t_stack))) # direct current point -> initial point
-    for i in range(len(tcfcells_tlapse)-1):
-        bf_tcfcells = tcfcells_tlapse[i]
-        af_tcfcells = tcfcells_tlapse[i+1]
-        if len(bf_tcfcells) != len(af_tcfcells):
-            warn_msg = (f'number of cells are mismatched! next steps from {i}th component will be filled with None \n'
-                        f'file name: {bf_tcfcells[0].tcfname}')
-            warn(warn_msg)
-            non_tcfcells = [None] * (len(tcfcells_tlapse)-1-i)
-            for tcfcell_t in tcfcell_t_stack:
-                tcfcell_t.extend(non_tcfcells)
-            break
-        connectivity = [connectivity[bf] for bf in connectivity_func(bf_tcfcells,af_tcfcells)]
-        for (cell_idx, cell_t_idx) in enumerate(connectivity):
-            tcfcell_t_stack[cell_t_idx].append(af_tcfcells[cell_idx])
-    return tcfcell_t_stack
+    for i in range(1, len(tcfcells_tlapse)):
+        bf_tcfcells = tcfcells_tlapse[i-1]
+        af_tcfcells = tcfcells_tlapse[i]
+        # concat
+        connectivity = connectivity_func(bf_tcfcells, af_tcfcells)
+        for bf_tcfcell_loc, af_tcfcell in zip(connectivity, af_tcfcells):
+            if bf_tcfcell_loc != None:
+                tcfcell_t_stack[bf_tcfcell_loc].append(af_tcfcell)
+        # flush part of tcfcell_t
+        for i, tcfcell_t in enumerate(tcfcell_t_stack):
+            if i not in connectivity:
+                tcfcell_t_final.append(tcfcell_t)
+        # relocation
+        tcfcell_t_stack = [TCFcell_t([af_tcfcells[af_tcfcell_loc]]) if bf_tcfcell_loc is None else tcfcell_t_stack[bf_tcfcell_loc] for af_tcfcell_loc,bf_tcfcell_loc in enumerate(connectivity)]
+
+    tcfcell_t_final.extend(tcfcell_t_stack)
+    return tcfcell_t_final
