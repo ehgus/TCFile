@@ -34,8 +34,6 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
     # get basic data
     data = tcfile[index] - bgRI
     Volpix = tcfile.Volpix
-    tcfname = tcfile.TCFname
-    resol = tcfile.resol
     # generate labeled mask
     cellmask, lbl = cellmask_func(data)
     lbls = np.arange(1,lbl+1)
@@ -70,7 +68,7 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _defaul
         return tuple(result)
     CenterOfMass = [_center_of_mass(data*(cellmask==lbl)) for lbl in lbls]
 
-    tcfcells = [TCFcell(cm, resol, vol, dm, tcfname, index) for cm,vol, dm in zip(CenterOfMass, Volume, Drymass)]
+    tcfcells = [TCFcell(tcfile, index, CM=CM, volume=volume, drymass=drymass) for CM, volume, drymass in zip(CenterOfMass, Volume, Drymass)]
     if rtn_cellmask:
         for tcfcell,idx in zip(tcfcells, lbls):
             tcfcellmask = (cellmask== idx)

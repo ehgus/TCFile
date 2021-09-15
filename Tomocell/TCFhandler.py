@@ -65,14 +65,6 @@ class _basicTCFcell:
     It contains only data, not attributes
     '''
     @multimethod
-    def __init__(self, CM:tuple, volume: float, drymass:float):
-        self.properties = dict(
-            CM = CM,
-            volume = volume,
-            dryamss = drymass
-        )
-    
-    @multimethod
     def __init__(self, properties:dict):
         self.properties = properties
 
@@ -104,8 +96,12 @@ class _basicTCFcell:
 class TCFcell(_basicTCFcell):
 
     @multimethod
-    def __init__(self, tcfile:TCFile, idx:int, **args):
-        super().__init__(**args)
+    def __init__(self, tcfile:TCFile, idx:int, properties = None, **kwargs):
+        if properties is None:
+            properties = kwargs
+        elif len(kwargs) > 0:
+            properties.update(kwargs)
+        super().__init__(properties)
         # attributes
         self.tcfname = tcfile.tcfname
         self.resol = tcfile.resol
@@ -119,9 +115,9 @@ class TCFcell(_basicTCFcell):
                 super().__init__(f['/'])
                 # get attributes
                 self.tcfname = f.attrs['tcfname']
-                self.idx = f.attrs['idx'][0]
+                self.idx = f.attrs['idx']
                 self.resol = f.attrs['resol']
-                self.imgtype = f.attrs['imgtype']
+                self.imgtype = _ImgDim(f.attrs['imgtype'])
             else:
                 NameError('The file does not support TCFcell')
     
@@ -131,8 +127,9 @@ class TCFcell(_basicTCFcell):
             # set attributes
             f.attrs['type'] = 'TCFcell'
             f.attrs['tcfname'] = self.tcfname
-            f.attrs['imgtype'] = self.imgtype.value
             f.attrs['idx'] = self.idx
+            f.attrs['resol'] = self.resol
+            f.attrs['imgtype'] = self.imgtype.value
 
 class TCFcell_t:
 
@@ -146,8 +143,8 @@ class TCFcell_t:
 
         self.tcfcells = [_basicTCFcell(tcfcell.properties) if tcfcell is not None else None for tcfcell in tcfcells]
         self.tcfname = tcfcells[0].tcfname
-        self.len = len(TCFile(self.tcfname))
-        self.imgtype = '3D' if len(tcfcells[0]['CM']) == 3 else '2D'
+        self.imgtype = tcfcells[0].imgtype
+        self.len = len(TCFile(self.tcfname, self.imgtype.value))
 
     @multimethod
     def __init__(self, fname:str):

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from matplotlib.patches import Arrow, Circle, Ellipse, Rectangle
 
-class slice3dviewer:
+class sliceviewer:
     def __init__(self, data, data_ax, title = '',z = 0):
         self.ax = data_ax
         data_ax.set_title(title)
