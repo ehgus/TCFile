@@ -15,24 +15,38 @@ class _ImgDim(Enum):
             return 3
 
 class _BasicTCFile:
+    """
+    Interface class to TCF files
 
-    def __init__(self, tcfname:str, imgtype:str):
-            self.tcfname=tcfname
-            if imgtype in _ImgDim._value2member_map_.keys():
-                self.imgtype=_ImgDim(imgtype)
-            else:
-                raise ValueError('imgtype only support "2D" and "3D"')
-            _idx = -self.imgtype.intval()
+    <Attributes>
+    :length: time series length of the TCF file
+    :shape: shape of single shot data
+    :resol: (unit: μm)resolution of data. It represents unit resolution per pixel
+    :dt: (unit: s) Time steps of data. Zero if it is single shot data  
+    """
 
-            with h5py.File(tcfname) as f:
-                if imgtype not in f['Data']:
-                    raise ValueError('The TCFile does not support the suggested image type')
-                getAttr = lambda name: f[f'Data/{imgtype}'].attrs[name][0]
-                self.length = getAttr('DataCount')
-                self.shape = tuple(getAttr(f'Size{idx}') for idx in  ('Z', 'Y', 'X')[_idx:])
-                self.resol = tuple(getAttr(f'Resolution{idx}') for idx in  ('Z', 'Y', 'X')[_idx:])
-                self.Volpix = np.prod(self.resol) # (μm)^D (D:dimensions)
-                self.dt = 0 if self.length == 1 else getAttr('TimeInterval') # s
+    def __init__(self, tcfname:str, imgtype:Union[str,_ImgDim]):
+        '''
+        :tcfname: location of the target TCF file
+        :imgtype: image type to see. Either '2D' or '3D' is the only option. 
+        If the data does not contains such data, it raises error.
+        '''
+        self.tcfname=tcfname
+        if type(imgtype) is _ImgDim:
+            self.imgtype=imgtype
+        elif imgtype in _ImgDim._value2member_map_.keys():
+            self.imgtype=_ImgDim(imgtype)
+        else:
+            raise ValueError('imgtype only support "2D" and "3D"')
+        _idx = -self.imgtype.intval()
+        with h5py.File(tcfname) as f:
+            if imgtype not in f['Data']:
+                raise ValueError('The TCFile does not support the suggested image type')
+            getAttr = lambda name: f[f'Data/{imgtype}'].attrs[name][0]
+            self.length = getAttr('DataCount')
+            self.shape = tuple(getAttr(f'Size{idx}') for idx in  ('Z', 'Y', 'X')[_idx:])
+            self.resol = tuple(getAttr(f'Resolution{idx}') for idx in  ('Z', 'Y', 'X')[_idx:])
+            self.dt = 0 if self.length == 1 else getAttr('TimeInterval')
         
     def __getitem__(self, key):
         if key >= self.length:
@@ -46,11 +60,11 @@ class _BasicTCFile:
 
 class TCFile(_BasicTCFile):
 
-    def __init__(self, tcfname:str, imgtype:str, dtype=np.float32):
+    def __init__(self, tcfname:str, imgtype:Union[str,_ImgDim], dtype=np.float32):
         super().__init__(tcfname, imgtype)
         self.dtype = dtype
     
-    def getrawdata(self, key) -> np.ndarray:
+    def raw_getitem(self, key) -> np.ndarray:
         return super().__getitem__(key)
 
     def __getitem__ (self, key) -> np.ndarray:
