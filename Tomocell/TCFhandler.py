@@ -3,6 +3,7 @@ import numpy as np
 from typing import List, Union
 from multimethod import multimethod
 from enum import Enum
+from collections.abc import MutableMapping
 
 class _ImgDim(Enum):
     TwoD = '2D'
@@ -68,13 +69,13 @@ class TCFile(_BasicTCFile):
         return super().__getitem__(key)
 
     def __getitem__ (self, key) -> np.ndarray:
-        data = self.getrawdata(key).astype(self.dtype)
+        data = self.raw_getitem(key).astype(self.dtype)
         data /= 1e4
         return data
 
 
 
-class _basicTCFcell:
+class _basicTCFcell(MutableMapping):
     '''
     It contains only data, not attributes
     '''
@@ -97,11 +98,11 @@ class _basicTCFcell:
     def __delitem__(self, key:str):
         del self.properties[key]
     
-    def keys(self):
-        return self.properties.keys()
+    def __iter__(self):
+        return iter(self.properties)
     
-    def items(self):
-        return self.properties.items()
+    def __len__(self):
+        return len(self.properties)
 
     def save(self, io):
         for key in self.keys():
@@ -110,11 +111,8 @@ class _basicTCFcell:
 class TCFcell(_basicTCFcell):
 
     @multimethod
-    def __init__(self, tcfile:TCFile, idx:int, properties = None, **kwargs):
-        if properties is None:
-            properties = kwargs
-        elif len(kwargs) > 0:
-            properties.update(kwargs)
+    def __init__(self, tcfile:TCFile, idx:int, properties = dict(), **kwargs):
+        properties.update(**kwargs)
         super().__init__(properties)
         # attributes
         self.tcfname = tcfile.tcfname
