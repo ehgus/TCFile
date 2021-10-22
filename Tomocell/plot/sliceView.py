@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from matplotlib.widgets import Slider
 from matplotlib.patches import Arrow, Circle, Ellipse, Rectangle
 
-class sliceviewer:
-    def __init__(self, data, data_ax, title = '',z = 0):
+class sliceView:
+    def __init__(self, data, data_ax, title = '',z = 0,cmap = cm.gray):
         self.ax = data_ax
         data_ax.set_title(title)
         # set size of axes
@@ -18,7 +19,7 @@ class sliceviewer:
         self.sliceind = [slice(None),slice(None)]
         self.sliceind.insert(z, init_val)
         
-        self.im = data_ax.imshow(data[tuple(self.sliceind)])
+        self.im = data_ax.imshow(data[tuple(self.sliceind)], cmap = cmap)
         # set slider
         self.slider = Slider(
             ax = slider_ax,
@@ -37,31 +38,26 @@ class sliceviewer:
         self.active_patches=[]
         self.patches=[list() for _ in range(self.slices)]
 
-
-    def add_point(self,point,z,radius =3,color='purple'):
-        circle = Circle(point,radius=radius, color=color,visible=False)
-        p = self.ax.add_patch(circle)
+    def add_shape(self, shape, z):
+        p = self.ax.add_patch(shape)
         self.patches[z].append(p)
         self.active_patches.append(p)
+    
+    def add_point(self,point,z,radius =3,color='purple'):
+        circle = Circle(point,radius=radius, color=color,visible=False)
+        self.add_shape(circle, z)
 
     def add_arrow(self,start,end,z,width=4,color='red'):
         arrow = Arrow(start[0],start[1],end[0],end[1],width=width,color=color,visible=False)
-        p = self.ax.add_patch(arrow)
-        self.patches[z].append(p)
-        self.active_patches.append(p)
+        self.add_shape(arrow, z)
     
     def add_ellipse(self,xy,width,height,angle,z,color='green'):
         ellipse = Ellipse(xy, width, height, angle, color=color,visible=False,fill=False)
-        p = self.ax.add_patch(ellipse)
-        self.patches[z].append(p)
-        self.active_patches.append(p)
+        self.add_shape(ellipse, z)
     
     def add_rect(self,xy,width,height,angle,z,color='blue'):
         rect = Rectangle(xy, width, height, angle, color=color,visible=False,fill=False)
-        p = self.ax.add_patch(rect)
-        self.patches[z].append(p)
-        self.active_patches.append(p)
-
+        self.add_shape(rect, z)
         
     def update(self,_):
         sliceval = self.slider.val

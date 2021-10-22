@@ -1,1 +1,1 @@
-from .matplot_slice import sliceviewer
+from .sliceView import sliceView
