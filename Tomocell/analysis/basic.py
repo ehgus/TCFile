@@ -1,6 +1,7 @@
 import enum
 from numpy.core.fromnumeric import argmin
 from skimage import filters
+from skimage import segmentation as seg
 import scipy.ndimage as ndi
 from scipy.spatial.distance import cdist
 import numpy as np
@@ -19,6 +20,7 @@ def _default_cellmask(img:np.ndarray):
     _b2_cellmask = np.empty_like(_b_cellmask, dtype = _b_cellmask.dtype)
     # bottleneck!
     # see this issues before you modify the next codes: https://github.com/scipy/scipy/issues/13991#issuecomment-839853868
+    _b_cellmask = seg.clear_border(_b_cellmask)
     ndi.binary_erosion(_b_cellmask, structure=kernel, iterations = 2, output = _b2_cellmask)
     ndi.binary_dilation(_b2_cellmask, structure=kernel, iterations = 4, output = _b_cellmask)
     ndi.binary_fill_holes(_b_cellmask, output = _b2_cellmask)
@@ -27,52 +29,37 @@ def _default_cellmask(img:np.ndarray):
     cellmask, lbl = ndi.label(_b_cellmask)
     return cellmask, lbl
 
-def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, cellmask_func = _default_cellmask,rtn_cellmask = False, **constraints) -> List[TCFcell]:
+def _get_center_of_mass(data):
+    indices = (np.arange(1,data.ndim+1).reshape(-1,1) + np.arange(data.ndim-1).reshape(1,-1))%data.ndim
+    partial_sum = [np.sum(data,tuple(idx)) for idx in indices]
+    norm = np.sum(partial_sum[0])
+    grids = [np.arange(size) for size in data.shape]
+    result = [np.sum(idx_sum*grid)/norm for idx_sum,grid in zip(partial_sum, grids)]
+    return tuple(result)
+
+def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, rtn_cellmask = False, contraint_function = None) -> List[TCFcell]:
     '''
     img should contain RI information
     '''
     # get basic data
     data = tcfile[index] - bgRI
-    Volpix = tcfile.Volpix
+    Volpix = np.prod(tcfile.resol)
     # generate labeled mask
-    cellmask, lbl = cellmask_func(data)
-    lbls = np.arange(1,lbl+1)
-
+    cellmask, labelcount = _default_cellmask(data)
+    labels = np.arange(1,labelcount+1)
     # evaluate physical parameters
-    Volume = np.fromiter((np.count_nonzero(cellmask == lbl)*Volpix for lbl in lbls),float) # (μm)^D (D:dimensions)
-    if 'minvol' in constraints.keys():
-        limit = Volume > constraints['minvol']
-        Volume = Volume[limit]
-        lbls = lbls[limit]
-    if 'maxvol' in constraints.keys():
-        limit = Volume < constraints['maxvol']
-        Volume = Volume[limit]
-        lbls = lbls[limit]
-
-    Drymass = ndi.labeled_comprehension(data, cellmask, lbls, lambda x: np.sum(x)*Volpix/0.185,float, None) # pg
-    if 'mindm' in constraints.keys():
-        limit = Drymass > constraints['mindm']
-        Drymass = Drymass[limit]
-        lbls = lbls[limit]
-    if 'maxdm' in constraints.keys():
-        limit = Drymass < constraints['maxdm']
-        Drymass = Drymass[limit]
-        lbls = lbls[limit]
-    
-    def _center_of_mass(data):
-        indices = (np.arange(1,data.ndim+1).reshape(-1,1) + np.arange(data.ndim-1).reshape(1,-1))%data.ndim
-        partial_sum = [np.sum(data,tuple(idx)) for idx in indices]
-        norm = np.sum(partial_sum[0])
-        grids = [np.arange(size) for size in data.shape]
-        result = [np.sum(idx_sum*grid)/norm for idx_sum,grid in zip(partial_sum, grids)]
-        return tuple(result)
-    CenterOfMass = [_center_of_mass(data*(cellmask==lbl)) for lbl in lbls]
-
-    tcfcells = [TCFcell(tcfile, index, CM=CM, volume=volume, drymass=drymass) for CM, volume, drymass in zip(CenterOfMass, Volume, Drymass)]
-    if rtn_cellmask:
-        for tcfcell,idx in zip(tcfcells, lbls):
-            tcfcellmask = (cellmask== idx)
-            tcfcell['mask'] = tcfcellmask
+    tcfcells = []
+    for label in labels:
+        single_mask = cellmask == label
+        volume = np.count_nonzero(single_mask)*Volpix   # (μm)^D (D:dimensions)
+        single_cell = single_mask * data                # pg
+        drymass = np.sum(single_cell)*Volpix/0.185
+        CM = _get_center_of_mass(single_cell)
+        if contraint_function(volume, drymass, CM):
+            tcfcell = TCFcell(tcfile, index, CM, volume, drymass)
+            if rtn_cellmask:
+                tcfcell['mask'] = single_mask
+            tcfcells.append(TCFcell(tcfile, index, CM, volume, drymass))
 
     return tcfcells
 
