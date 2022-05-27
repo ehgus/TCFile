@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.ndimage as ndi
 from skimage import filters
+from ..TCFhandler import *
 
 def _default_cellmask(img:np.ndarray):
     kernel = _diamond_kernel(1,len(img.shape))
@@ -47,3 +48,9 @@ def compress_mask(mask:np.ndarray):
     compressed= mask[tuple(slice(start,stop) for start, stop in zip(start_index, stop_index))]
 
     return compressed, start_index
+
+def decompress_mask(mask_compressed:np.ndarray, start_index:tuple, tcfile:TCFile):
+    mask = np.zeros(tcfile.dataShape, dtype = bool)
+    slices = tuple(slice(start, end + start) for start, end in zip(start_index, mask_compressed.shape))
+    mask[slices] = mask_compressed
+    return mask

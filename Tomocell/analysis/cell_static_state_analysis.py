@@ -29,12 +29,14 @@ def get_celldata(tcfile:TCFile, index:int, bgRI = 1.337, rtn_cellmask = False, c
         mask_compressed, start_index = compress_mask(single_mask)
         single_cell = mask_compressed * data[tuple(slice(start, start+length) for length, start in zip(mask_compressed.shape, start_index))]
         DMass = np.sum(single_cell)*Volpix/0.185        # pg
-        Vol = np.count_nonzero(single_mask)*Volpix      # (μm)^D (D:dimensions)
+        Vol = np.count_nonzero(single_mask)*Volpix      # (μm)^3
         CMass = _get_center_of_mass(single_cell) + np.array(start_index)        # pixel location
-        tcfcell = TCFcell(tcfile, index, DMass, Vol, CMass)
+        if rtn_cellmask:
+            mask = (mask_compressed, start_index)
+            tcfcell = TCFcell(tcfile, index, DMass, Vol, CMass, mask)
+        else:
+            tcfcell = TCFcell(tcfile, index, DMass, Vol, CMass)
         if constraints(tcfcell):
-            if rtn_cellmask:
-                tcfcell['mask'] = single_mask
             tcfcells.append(tcfcell)
     return tcfcells
 

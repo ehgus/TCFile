@@ -9,11 +9,10 @@ class TestTCFile:
 
     def test_creation(self):
         TCFile(fname,'3D')
-        TCFile(fname,'2D')
         try:
             TCFile(fname,'4D')
         except ValueError as e:
-            if e.args[0] != 'imgtype only support "2D" and "3D"':
+            if e.args[0] != 'The imgtype is not supported':
                 assert False
     
     def test_read(self):
@@ -24,12 +23,12 @@ class TestTCFile:
     def test_iterative_read(self):
         tcfile = TCFile(fname,'3D')
         for data in tcfile:
-            assert tcfile.shape == data.shape
+            assert np.array_equal(tcfile.dataShape, data.shape)
             
     def test_attributes(self):
         tcfile = TCFile(fname,'3D')
         data = tcfile[0]
-        assert tcfile.shape == data.shape
+        assert np.array_equal(tcfile.dataShape, data.shape)
         assert len(tcfile) == 1
         assert tcfile.dt == 0
     
@@ -37,22 +36,21 @@ class TestTCFcell:
 
     def test_creation(self):
         tcfile = TCFile(fname, '3D')
-        x = TCFcell(tcfile, 0, CM = (1.0,1.0,1.0), volume = 3, drymass = 80)
-        y = TCFcell(tcfile, 0, dict(CM = (1.0,1.0,1.0), volume = 3, drymass = 80))
-        z = TCFcell(tcfile, 0, dict(CM = (1.0,1.0,1.0)), volume = 3, drymass = 80)
+        tcfcell = TCFcell(tcfile, 0, DMass = 80,CMass = (1.0,1.0,1.0), Vol = 3)
+        #y = TCFcell(tcfile, 0, dict(CMass = (1.0,1.0,1.0), Vol = 3, DMass = 80))
+        #z = TCFcell(tcfile, 0, dict(CMass = (1.0,1.0,1.0)), Vol = 3, DMass = 80)
 
-        assert np.array_equal(x['CM'], (1.0,1.0,1.0))
-        assert x['volume'] == 3
-        assert x['drymass'] == 80
+        assert np.array_equal(tcfcell['CMass'], (1.0,1.0,1.0))
+        assert tcfcell['Vol'] == 3
+        assert tcfcell['DMass'] == 80
         try:
-            x['hello world']
+            tcfcell['hello world']
         except KeyError:
-            pass 
-        assert x.properties == y.properties == z.properties
+            pass
 
     def test_save_load(self):
         tcfile = TCFile(fname, '3D')
-        tcfcell = TCFcell(tcfile, 0, CM = np.array((1.0,1.0,1.0)), volume = 3, drymass = 80)
+        tcfcell = TCFcell(tcfile, 0, DMass = 80,CMass = (1.0,1.0,1.0), Vol = 3)
         #save
         tmpf = tempfile.TemporaryFile()
         tmpf.close()
@@ -61,8 +59,11 @@ class TestTCFcell:
         #load
         loaded_tcfcell= TCFcell(tcfcell_fname)
 
-        for key,val in loaded_tcfcell.items():
+        for key in ('CMass','DMass','Vol'):
+            loaded_tcfcell.CMass
+            loaded_val = loaded_tcfcell[key]
+            ref_val = tcfcell[key]
             try:
-                assert val == tcfcell[key]
+                assert loaded_val == ref_val
             except ValueError:
-                assert np.array_equal(val, tcfcell[key])
+                assert np.array_equal(loaded_val, ref_val)

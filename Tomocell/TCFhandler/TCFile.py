@@ -85,9 +85,9 @@ class TCFile(Sequence):
         with h5py.File(self.tcfname) as f:
             data = f[f'Data/{self.imgtype}/{key:06d}'][()] 
         
-        if not np.issubdtype(data.type, np.floating):
+        if not np.issubdtype(data.dtype, np.floating):
             # To preserve the storage, some TCF file save data as a integer scaled by 1e4
-            data = self.get_raw(key).astype(np.float32)
+            data = data.astype(np.float32)
             data /= 1e4
 
         return data
