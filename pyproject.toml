@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Tomocell"
+license = {file = "LICENSE.txt"}
+version = "0.0.1"
+description = "Python package for handling TCF data. It works with Tomcube data"
+maintainers = [
+    {name = 'Dohyeon Lee', email = 'dleh428@kaist.ac.kr'}
+]
+
+requires-python = ">=3.8"
+dependencies = [
+    'numpy>=1.18.5',
+    'scipy>=1.7.0',
+    'scikit-image>0.18.2',
+    'h5py>=3.2.0',
+    'matplotlib>=3.4.0',
+    'multimethod>=1.4',
+    'opencv-python>=4.5.0',
+    'pytest>=6.2'
+]
+
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Operating System :: Microsoft :: Windows"
+]
+
+
+[tool.setuptools.packages.find]
+where = ["Tomocell"]
+exclude = ["tests"]
