@@ -10,6 +10,12 @@ After downloading the repository, execute the following command in the repositor
 pip install .
 ```
 
+## Note
+
+It is not for normal users, and API is not fixed. 
+Please use this package with full understanding.
+Any suggestions and comments are welcome! 
+
 ## Use case
 
 ```python
@@ -26,35 +32,6 @@ print(f"shape of data : {data.shape}")
 for data in tcfile:
     # do some operations on the data ...
     pass
-
-## Usage 2: Evaluate cell properties of each cell in a single snapshot
-bgRI = 1.337 # refractive index of media
-rtn_cellmask = False # check whether you store cell mask or not
-
-def cotraints(tcfcell:TCFcell):
-    if tcfcell.DMass > 30: # dry mass is more than 30
-        return True
-    return False
-tcfcell_group = [get_celldata(tcfile, snapshot_number,bgRI, rtn_cellmask = rtn_cellmask) 
-                    for snapshotnumber in range(len(tcfile))]
-# save example
-tcfcell = tcfcell_group[0][0]
-tcfcell.save("tcfcell_0th_snapshot_0th_cell.h5")
-
-# load example
-tcfcell = TCFcell("tcfcell_0th_snapshot_0th_cell.h5")
-
-
-## Usage 3: track each cell using positional parameters and save the parameter
-tcfcell_t_group = get_celldata_t(tcfcells_tlapse)
-
-# save example
-tcfcell_t = tcfcell_t_group[0] 
-tcfcell_t.save("tcfcell_0th_cell_tracking_result.h5")
-
-# load example
-tcfcell_t = TCFcell_t("tcfcell_0th_snapshot_0th_cell.h5")
-
 ```
 
 ## Test (for development and contribution)

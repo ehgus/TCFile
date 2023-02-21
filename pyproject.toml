@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "Tomocell"
-version = "0.0.1"
+version = "2023.02"
 description = "Python package for handling TCF data. It works with Tomcube data"
 readme = "README.md"
 requires-python = ">=3.7"
