@@ -7,7 +7,7 @@ name = "Tomocell"
 version = "0.0.1"
 description = "Python package for handling TCF data. It works with Tomcube data"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.7"
 license = {file = "LICENSE"}
 authors = [{name = "Dohyeon Lee", email = "dleh428@kaist.ac.kr"}]
 
@@ -16,8 +16,8 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Operating System :: Microsoft :: Windows",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Image Processing"

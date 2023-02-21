@@ -1,4 +1,5 @@
 from typing import Sequence
+from PIL import Image
 import numpy as np
 import h5py
 
@@ -7,7 +8,7 @@ class TCFile(Sequence):
     interface class to TCF files.
     This class returns data as if list containg multiple data.
     Preview of the data is stored in attributes.
-    * Note: It can only read 2D, 3D for now. (No fluorence file)
+    * Note: It can read 3D, 2DMIP, BF.
 
     Attributes
     ----------
@@ -40,6 +41,8 @@ class TCFile(Sequence):
         # validation of input parameters
         if '3D' == imgtype:
             dim = 3
+        elif '2DMIP' == imgtype or 'BF' == imgtype:
+            dim = 2
         else:
             raise ValueError('The imgtype is not supported')
 
@@ -57,7 +60,7 @@ class TCFile(Sequence):
             self.dataShape.reverse()
             self.dataResolution = list(getAttr(f'Resolution{axis}') for axis in  ('X', 'Y', 'Z')[:dim])
             self.dataResolution.reverse()
-            self.dt = 0 if self.length == 1 else getAttr('TimeInterval')
+            self.dt = getAttr('TimeInterval')
         
         self.tcfname = tcfname
         self.imgtype = imgtype
@@ -76,19 +79,23 @@ class TCFile(Sequence):
         IndexError
             If key is out of bound
         '''
+        length = len(self)
         if not isinstance(key, int):
             raise TypeError(f'{self.__class__} indices must be integer, not {type(key)}')
-        if key < -self.length or key >= self.length:
+        if key < -length or key >= length:
             raise IndexError(f'{self.__class__} index out of range')
-        key = (key + self.length) % self.length
+        key = (key + length) % length
 
         with h5py.File(self.tcfname) as f:
             data = f[f'Data/{self.imgtype}/{key:06d}'][()] 
         
-        if not np.issubdtype(data.dtype, np.floating):
-            # To preserve the storage, some TCF file save data as a integer scaled by 1e4
+        if ('3D' == self.imgtype or '2DMIP' == self.imgtype) and not np.issubdtype(data.dtype, np.floating):
+            # To preserve the storage, some TCF file save data as a UInt16 integer scaled by 1e4
             data = data.astype(np.float32)
             data /= 1e4
+        else:
+            # BF
+            data = Image.fromarray(data, mode = 'RGB')
 
         return data
 
