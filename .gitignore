@@ -1,2 +1,19 @@
+# OS generated files #
+######################
+.DS_Store*
+.VolumeIcon.icns
+.fseventsd
+Icon?
+.gdb_history
+ehthumbs.db
+Thumbs.db
+.directory
+
+# Python files #
+################
+# pycache
 __pycache__
-Tomocell.egg-info
+# dist directory
+dist
+# Egg metadata
+*.egg-info
