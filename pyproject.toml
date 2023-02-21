@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "Tomocell"
+name = "TCFile"
 version = "2023.02"
 description = "Python package for handling TCF data. It works with Tomcube data"
 readme = "README.md"
@@ -35,5 +35,5 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["Tomocell"]
+where = ["TCFile"]
 exclude = ["tests"]

@@ -1,4 +1,4 @@
-## Tomocell python package
+## TCFile python package
 
 Basic image processing tools of tomocube data.
 
@@ -20,7 +20,7 @@ Any suggestions and comments are welcome!
 
 ```python
 
-from Tomocell import *
+from TCFile import *
 
 tcfile = TCFile('test.TCF','3D') # for now, it only read 3D RI data
 print(f"number of snapshots : {len(tcfile)}")
@@ -37,5 +37,5 @@ for data in tcfile:
 ## Test (for development and contribution)
 
 ```bash
-pytest Tomocell/tests/TCFhandler.py
+pytest TCFile/tests/TCFhandler.py
 ```
