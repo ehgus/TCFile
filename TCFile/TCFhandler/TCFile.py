@@ -93,8 +93,7 @@ class TCFile(Sequence):
             # To preserve the storage, some TCF file save data as a UInt16 integer scaled by 1e4
             data = data.astype(np.float32)
             data /= 1e4
-        else:
-            # BF
+        elif 'BF' == self.imgtype:
             data = Image.fromarray(data, mode = 'RGB')
 
         return data
