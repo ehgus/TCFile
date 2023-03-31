@@ -6,9 +6,6 @@ on:
       - main
     tags:
       - "*"
-  pull_requests:
-    branches:
-      - main
 
 jobs:
   deploy:
@@ -24,12 +21,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -U flit
+          pip install -U "flit>=3.2,<4"
       - name: Build and publish
         env:
           FLIT_USERNAME: __token__
           FLIT_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           git tag
-          flit build
           flit publish
