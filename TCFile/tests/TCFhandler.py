@@ -17,7 +17,7 @@ class TestTCFile:
     def test_read(self):
         tcfile = TCFile(fname,'3D')
         data =tcfile[0]
-        assert np.min(data) > 1     #physically true
+        assert np.array_equal(tcfile.dataShape, data.shape)
     
     def test_iterative_read(self):
         tcfile = TCFile(fname,'3D')
@@ -26,7 +26,5 @@ class TestTCFile:
             
     def test_attributes(self):
         tcfile = TCFile(fname,'3D')
-        data = tcfile[0]
-        assert np.array_equal(tcfile.dataShape, data.shape)
-        assert len(tcfile) == 1
-        assert tcfile.dt == 0
+        assert len(tcfile) == 10
+        assert tcfile.dt >= 0

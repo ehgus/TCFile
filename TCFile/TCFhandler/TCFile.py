@@ -53,14 +53,16 @@ class TCFile(Sequence):
             elif imgtype not in f['Data']:
                 raise ValueError('The imgtype is not supported')
             # load attributes
-            getAttr = lambda attrName: f[f'Data/{imgtype}'].attrs[attrName][0]
+            getAttr = lambda attrName: f[f'Data/{imgtype}'].attrs.get(attrName)[0]
         
             self.length = getAttr('DataCount')
             self.dataShape = list(getAttr(f'Size{axis}') for axis in  ('X', 'Y', 'Z')[:dim])
             self.dataShape.reverse()
             self.dataResolution = list(getAttr(f'Resolution{axis}') for axis in  ('X', 'Y', 'Z')[:dim])
             self.dataResolution.reverse()
-            self.dt = getAttr('TimeInterval')
+            self.dt = f[f'Data/{imgtype}'].attrs.get('TimeInterval',default=[None])[0]
+            if self.dt is None:
+                self.dt = 0
         
         self.tcfname = tcfname
         self.imgtype = imgtype
@@ -87,7 +89,7 @@ class TCFile(Sequence):
         key = (key + length) % length
 
         with h5py.File(self.tcfname) as f:
-            data = f[f'Data/{self.imgtype}/{key:06d}'][()] 
+            data = f[f'Data/{self.imgtype}/{key:06d}'][()]
         
         if ('3D' == self.imgtype or '2DMIP' == self.imgtype) and not np.issubdtype(data.dtype, np.floating):
             # To preserve the storage, some TCF file save data as a UInt16 integer scaled by 1e4
