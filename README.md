@@ -20,7 +20,7 @@ Any suggestions and comments are welcome!
 
 ```python
 
-from TCFile import *
+from ..TCFile import *
 
 tcfile = TCFile('test.TCF','3D') # for now, it only read 3D RI data
 print(f"number of snapshots : {len(tcfile)}")
@@ -37,5 +37,6 @@ for data in tcfile:
 ## Test (for development and contribution)
 
 ```bash
-pytest TCFile/tests/TCFhandler.py
+conda install PIL h5py numpy
+pytest TCFile-tests/TCFhandler.py
 ```

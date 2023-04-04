@@ -1,4 +1,8 @@
-from . import TCFile
+import sys
+import os
+sys.path.insert(0, os.path. os.path.dirname(os.path.abspath(os.path.realpath('__file__'))))
+
+from TCFile import TCFile
 import numpy as np
 import os
 
