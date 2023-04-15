@@ -32,6 +32,8 @@ for data in tcfile:
 - [ ] TCFile compressor/decompressor for portability
 - [ ] rich documentation
 - [ ] rigorous tests
+- [ ] TCFile writer ?
+- [ ] TCFile converter ?
 
 Any suggestions and comments are welcome!
 
