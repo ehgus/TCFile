@@ -8,7 +8,7 @@ class TCFile(Sequence):
     interface class to TCF files.
     This class returns data as if list containg multiple data.
     Preview of the data is stored in attributes.
-    * Note: It can read 3D, 2DMIP, BF.
+    * Note: It can read 3D, 2DMIP, BF. 
 
     Attributes
     ----------
@@ -72,7 +72,9 @@ class TCFile(Sequence):
         Return
         ------
         data : numpy.ndarray[uint8]
-            raw data of refractive index mutliplided by 1e4.
+            return a single image.
+            When choosing 2DMIP or 3D data as a output, it returns refractive index map,
+            and a RGB image for bright field image.
 
         Raises
         ------
@@ -101,5 +103,8 @@ class TCFile(Sequence):
         return data
 
     def __len__(self):
+        '''
+        Return the number of images available. 
+        '''
         return self.length
 

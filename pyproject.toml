@@ -4,10 +4,10 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "TCFile"
-version = "2023.4"
+version = "1!0.1.0"
 description = "Python package for handling TCF data. It works with Tomcube data"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.7,<4"
 license = {file = "LICENSE"}
 authors = [{name = "Dohyeon Lee", email = "dleh428@kaist.ac.kr"}]
 
@@ -24,16 +24,10 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy>=1.18.5",
-    "scipy>=1.7.0",
-    "scikit-image>0.18.2",
-    "h5py>=3.2.0",
-    "multimethod>=1.4",
-    "matplotlib>=3.4.0",
-    "opencv-python>=4.5.0",
-    "pytest>=6.2"
+    "numpy>=1.18.5,<2",
+    "h5py>=3.2.0,<4",
+    "pillow>=9.5.0,<10"
 ]
 
 [tool.setuptools.packages.find]
 where = ["TCFile"]
-exclude = ["tests"]

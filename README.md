@@ -1,31 +1,23 @@
-## TCFile python package
+# TCFile python package
 
-Basic image processing tools of tomocube data.
+A basic image processing tool of tomocube data.
 
 ## Installation
 
-After downloading the repository, execute the following command in the repository;
-
 ```bash
-pip install .
+pip install TCFile
 ```
-
-## Note
-
-It is not for normal users, and API is not fixed. 
-Please use this package with full understanding.
-Any suggestions and comments are welcome! 
 
 ## Use case
 
 ```python
 
-from ..TCFile import *
+from TCFile import TCFile
 
-tcfile = TCFile('test.TCF','3D') # for now, it only read 3D RI data
+tcfile = TCFile('test.TCF','3D') # ready for return 3D RI images
 print(f"number of snapshots : {len(tcfile)}")
 
-## Usage 1: handling a data for each snapshot
+## Usage 1: handling each snapshots (or data)
 data = tcfile[0]
 print(f"shape of data : {data.shape}")
 # or
@@ -34,9 +26,22 @@ for data in tcfile:
     pass
 ```
 
-## Test (for development and contribution)
+## TODO
+
+- [ ] fluorescence data reader
+- [ ] TCFile compressor/decompressor for portability
+- [ ] rich documentation
+- [ ] rigorous tests
+
+Any suggestions and comments are welcome!
+
+## Test
 
 ```bash
-conda install PIL h5py numpy
-pytest TCFile-tests/TCFhandler.py
+# install this package in editable mode
+git clone https://github.com/ehgus/TCFile.git
+cd TCFile
+pip install -e .
+# execute pytest
+pytest
 ```

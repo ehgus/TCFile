@@ -1,1 +1,1 @@
-from .TCFhandler import *
+from .TCFile_class import *
