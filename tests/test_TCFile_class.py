@@ -15,12 +15,12 @@ class TestTCFile:
     def test_read(self):
         tcfile = TCFile(SAMPLE_TCF_FILE,'3D')
         data =tcfile[0]
-        assert np.array_equal(tcfile.dataShape, data.shape)
+        assert np.array_equal(tcfile.data_shape, data.shape)
     
     def test_iterative_read(self):
         tcfile = TCFile(SAMPLE_TCF_FILE,'3D')
         for data in tcfile:
-            assert np.array_equal(tcfile.dataShape, data.shape)
+            assert np.array_equal(tcfile.data_shape, data.shape)
             
     def test_attributes(self):
         tcfile = TCFile(SAMPLE_TCF_FILE,'3D')
