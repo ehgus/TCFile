@@ -56,7 +56,9 @@ class TCFileAbstract(Sequence):
             assert 'Data' in tcf_io, 'The given file is not TCF file'
             assert self.imgtype in tcf_io['Data'], 'The current imgtype is not supported in this file'
             # load attributes
-            self.format_version = self.get_attr(tcf_io, '/', 'FormatVersion').decode('UTF-8')
+            self.format_version = self.get_attr(tcf_io, '/', 'FormatVersion')
+            if not isinstance(self.format_version, str):
+                self.format_version = self.format_version.decode('UTF-8')
 
             data_info_path = f'/Data/{self.imgtype}'
             get_data_info_attr = lambda attr_name: self.get_attr(tcf_io, data_info_path, attr_name, default = 0)
