@@ -2,6 +2,7 @@ from typing import Sequence
 from PIL import Image
 import numpy as np
 import h5py
+import warnings
 
 def TCFile(tcfname:str, imgtype):
     if imgtype == '3D':
@@ -122,42 +123,45 @@ class TCFileRIAbstract(TCFileAbstract):
             if self.format_version < '1.3':
                 # RI = data
                 data = tcf_io[data_path][()]
-            elif self.format_version < '1.6':
-                # RI = data/1e4
-                data = tcf_io[data_path][()]
-                data = data.astype(np.float32)
-                data /= 1e4
             else:
-                # RI = data/1e3 + min_RI for uint8 data type (ScalarType True)
-                # RI = data/1e4          for uint16 data type (ScalarType False)
-                is_uint8 = get_data_attr('ScalarType')
-                if is_uint8:
-                    data_type = np.uint8
-                else:
-                    data_type = np.uint16
-                data = np.zeros(self.data_shape, data_type)
-
-                tile_count = get_data_attr('NumberOfTiles')
-                for tile_idx in range(tile_count):
-                    tile_path = f'{data_path}/TILE_{tile_idx:03d}'
-                    get_tile_attr = lambda attr_name: self.get_attr(tcf_io, tile_path, attr_name)
-                    sampling_step = get_tile_attr('SamplingStep')
-                    if sampling_step != 1:
-                        # what?! I don't know why... ask to Tomocube
-                        continue
-
-                    offset = list(get_tile_attr(f'DataIndexOffsetPoint{axis}') for axis in ('Z', 'Y', 'X')[3-self.data_ndim:])
-                    last_idx = list(get_tile_attr(f'DataIndexLastPoint{axis}') for axis in ('Z', 'Y', 'X')[3-self.data_ndim:])
-                    mapping_range = tuple(slice(start,end + 1) for start, end in zip(offset, last_idx))
-                    valid_data_range = tuple(slice(0,end - start + 1) for start, end in zip(offset, last_idx))
-                    data[mapping_range] += tcf_io[tile_path][valid_data_range]
-                data = data.astype(np.float32)
-                if is_uint8:
-                    min_RI = get_data_attr('RIMin')
-                    data /= 1e3
-                    data += min_RI
-                else:
+                try:
+                    # RI = data/1e4
+                    data = tcf_io[data_path][()]
+                    data = data.astype(np.float32)
                     data /= 1e4
+                except:
+                    warnings.warn(("You use an experimental file format deprecated.\n"
+                                   "Update your reconstruction program and rebuild TCF file."))
+                    # RI = data/1e3 + min_RI for uint8 data type (ScalarType True)
+                    # RI = data/1e4          for uint16 data type (ScalarType False)
+                    is_uint8 = get_data_attr('ScalarType')
+                    if is_uint8:
+                        data_type = np.uint8
+                    else:
+                        data_type = np.uint16
+                    data = np.zeros(self.data_shape, data_type)
+
+                    tile_count = get_data_attr('NumberOfTiles')
+                    for tile_idx in range(tile_count):
+                        tile_path = f'{data_path}/TILE_{tile_idx:03d}'
+                        get_tile_attr = lambda attr_name: self.get_attr(tcf_io, tile_path, attr_name)
+                        sampling_step = get_tile_attr('SamplingStep')
+                        if sampling_step != 1:
+                            # what?! I don't know why... ask to Tomocube
+                            continue
+
+                        offset = list(get_tile_attr(f'DataIndexOffsetPoint{axis}') for axis in ('Z', 'Y', 'X')[3-self.data_ndim:])
+                        last_idx = list(get_tile_attr(f'DataIndexLastPoint{axis}') for axis in ('Z', 'Y', 'X')[3-self.data_ndim:])
+                        mapping_range = tuple(slice(start,end + 1) for start, end in zip(offset, last_idx))
+                        valid_data_range = tuple(slice(0,end - start + 1) for start, end in zip(offset, last_idx))
+                        data[mapping_range] += tcf_io[tile_path][valid_data_range]
+                    data = data.astype(np.float32)
+                    if is_uint8:
+                        min_RI = get_data_attr('RIMin')
+                        data /= 1e3
+                        data += min_RI
+                    else:
+                        data /= 1e4
 
         return data
 
