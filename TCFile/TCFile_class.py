@@ -69,6 +69,47 @@ class TCFileAbstract(Sequence):
             self.length = get_data_info_attr('DataCount')
             self.dt = 0 if self.length == 1 else get_data_info_attr('DataCount')
 
+    def copy(self, output_file_path, compression_opt = {}):
+        """
+        Copies the structure, data, and attributes of an HDF5 file to a new file, compressing all datasets using gzip.
+
+        Parameters:
+        - input_file_path: path to the input HDF5 file.
+        - output_file_path: path where the output HDF5 file will be created.
+        - compression_opt: Type of compression to use. default is uncompress data.
+            If you want to compress data using gzip type `{"compression":"gzip", "compression_opts":}`.
+        
+        Note: This function does not return anything.
+        """
+        def copy_attributes(source, destination):
+            """
+            Copies attributes from the source to the destination.
+            """
+            for attr_name in source.attrs:
+                destination.attrs[attr_name] = source.attrs[attr_name]
+
+        def recursively_copy_and_compress(group_in, group_out):
+            """
+            Recursively copies groups/datasets from the input file to the output file with compression and copies attributes.
+            """
+            copy_attributes(group_in, group_out)  # Copy attributes for the group
+
+            for key in group_in:
+                item_in = group_in[key]
+                if isinstance(item_in, h5py.Dataset):
+                    # Copy dataset with compression and its attributes
+                    data = item_in[...]
+                    dataset_out = group_out.create_dataset(key, data=data, **compression_opt)
+                    copy_attributes(item_in, dataset_out)  # Copy attributes for the dataset
+                elif isinstance(item_in, h5py.Group):
+                    # Create group in the output file, copy attributes, and recurse
+                    group_out_sub = group_out.create_group(key)
+                    recursively_copy_and_compress(item_in, group_out_sub)
+
+        with h5py.File(self.tcfname, 'r') as file_in:
+            with h5py.File(output_file_path, 'w') as file_out:
+                recursively_copy_and_compress(file_in, file_out)
+
     def __len__(self):
         '''
         Return the number of images available. 
