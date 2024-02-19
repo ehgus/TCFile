@@ -9,6 +9,10 @@ ehthumbs.db
 Thumbs.db
 .directory
 
+# Editor generated files #
+##########################
+.vscode
+
 # Python files #
 ################
 # pycache
