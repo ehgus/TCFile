@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import h5py
 import warnings
+import hdf5plugin
 
 def TCFile(tcfname:str, imgtype):
     if imgtype == '3D':
