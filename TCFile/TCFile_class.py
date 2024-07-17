@@ -4,6 +4,7 @@ import numpy as np
 import h5py
 import warnings
 import hdf5plugin
+import re
 
 def TCFile(tcfname:str, imgtype):
     if imgtype == '3D':
@@ -185,12 +186,14 @@ class TCFileRIAbstract(TCFileAbstract):
                     data = np.zeros(self.data_shape, data_type)
 
                     tile_count = get_data_attr('NumberOfTiles')
-                    for tile_idx in range(tile_count):
-                        tile_path = f'{data_path}/TILE_{tile_idx:03d}'
+                    tile_path_list = [ p for p in tcf_io.keys() if re.match(r'^TILE_\d+$', p)]
+                    tile_path_list.sort()
+                    for p in tile_path_list:
+                        tile_path = f'{data_path}/{p}'
                         get_tile_attr = lambda attr_name: self.get_attr(tcf_io, tile_path, attr_name)
                         sampling_step = get_tile_attr('SamplingStep')
                         if sampling_step != 1:
-                            # what?! I don't know why... ask to Tomocube
+                            # what?! I don't know why... ask Tomocube
                             continue
 
                         offset = list(get_tile_attr(f'DataIndexOffsetPoint{axis}') for axis in ('Z', 'Y', 'X')[3-self.data_ndim:])
