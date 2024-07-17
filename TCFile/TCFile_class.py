@@ -12,6 +12,8 @@ def TCFile(tcfname:str, imgtype):
         return TCFileRI2DMIP(tcfname)
     if imgtype == 'BF':
         return TCFileBF(tcfname)
+    if imgtype == '3DFL':
+        return TCFileFL3D(tcfname)
     ValueError('Unsupported imgtype: Supported imgtypes are "3D","2DMIP", and "BF"')
 
 class TCFileAbstract(Sequence):
@@ -223,3 +225,21 @@ class TCFileBF(TCFileAbstract):
             data = f[data_path][()]
         data = Image.fromarray(data, mode = 'RGB')
         return data
+
+class TCFileFL3D(TCFileAbstract):
+    imgtype = '3DFL'
+    data_ndim = 3
+    channel = 0
+    def __init__(self, tcfname: str):
+        super().__init__(tcfname)
+        with h5py.File(self.tcfname) as f:
+            self.max_channels = self.get_attr(f, f'/Data/{self.imgtype}', 'Channels')
+
+    def __getitem__(self, key: int) -> np.ndarray:
+        self.imgtype = f'3DFL/CH{self.channel}'
+        data_path = self.get_data_location(key)
+        self.imgtype = '3DFL'
+        with h5py.File(self.tcfname) as f:
+            data = f[data_path][()]
+        return data
+
