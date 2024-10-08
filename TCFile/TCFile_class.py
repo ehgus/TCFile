@@ -5,6 +5,7 @@ import h5py
 import warnings
 import hdf5plugin
 import re
+import dask.array as da
 
 def TCFile(tcfname:str, imgtype):
     if imgtype == '3D':
@@ -160,20 +161,29 @@ class TCFileAbstract(Sequence):
         return attr_value
 
 class TCFileRIAbstract(TCFileAbstract):
-    def __getitem__(self, key: int) -> np.ndarray:
+    def __getitem__(self, key: int, array_type = 'numpy') -> np.ndarray:
+        if array_type == 'numpy':
+            into_array = np.asarray
+        elif array_type == 'dask':
+            into_array = da.from_array
+        else:
+            raise TypeError('array_type must be either "numpy" or "dask"')
+
         data_path = self.get_data_location(key)
-        with h5py.File(self.tcfname) as tcf_io:
-            get_data_attr = lambda attr_name: self.get_attr(tcf_io, data_path, attr_name)
-            if self.format_version < '1.3':
-                # RI = data
-                data = tcf_io[data_path][()]
-            else:
-                try:
-                    # RI = data/1e4
-                    data = tcf_io[data_path][()]
-                    data = data.astype(np.float32)
-                    data /= 1e4
-                except:
+        if self.format_version < '1.3':
+            # RI = data
+            data = into_array(h5py.File(self.tcfname)[data_path])
+        else:
+            try:
+                # RI = data/1e4
+                data = into_array(h5py.File(self.tcfname)[data_path])
+                data = data.astype(np.float32)
+                data /= 1e4
+            except:
+                if into_array == 'dask':
+                    raise ValueError('"dask" does not support this TCFile')
+                with h5py.File(self.tcfname) as tcf_io:
+                    get_data_attr = lambda attr_name: self.get_attr(tcf_io, data_path, attr_name)
                     warnings.warn(("You use an experimental file format deprecated.\n"
                                    "Update your reconstruction program and rebuild TCF file."))
                     # RI = data/1e3 + min_RI for uint8 data type (ScalarType True)
@@ -184,8 +194,6 @@ class TCFileRIAbstract(TCFileAbstract):
                     else:
                         data_type = np.uint16
                     data = np.zeros(self.data_shape, data_type)
-
-                    tile_count = get_data_attr('NumberOfTiles')
                     tile_path_list = [ p for p in tcf_io.keys() if re.match(r'^TILE_\d+$', p)]
                     tile_path_list.sort()
                     for p in tile_path_list:
@@ -238,11 +246,16 @@ class TCFileFL3D(TCFileAbstract):
         with h5py.File(self.tcfname) as f:
             self.max_channels = self.get_attr(f, f'/Data/{self.imgtype}', 'Channels')
 
-    def __getitem__(self, key: int) -> np.ndarray:
+    def __getitem__(self, key: int, array_type = 'numpy') -> np.ndarray:
+        if array_type == 'numpy':
+            into_array = np.asarray
+        elif array_type == 'dask':
+            into_array = da.from_array
+        else:
+            raise TypeError('array_type must be either "numpy" or "dask"')
         self.imgtype = f'3DFL/CH{self.channel}'
         data_path = self.get_data_location(key)
         self.imgtype = '3DFL'
-        with h5py.File(self.tcfname) as f:
-            data = f[data_path][()]
+        data = into_array(h5py.File(self.tcfname)[data_path]) 
         return data
 
