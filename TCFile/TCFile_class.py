@@ -154,7 +154,12 @@ class TCFileAbstract(Sequence):
         key = (key + length) % length
         data_path = f'/Data/{self.imgtype}/{key:06d}'
         return data_path
-    
+
+    def asdask(self) -> np.ndarray:
+        dask_arrays = [self.__getitem__(i, array_type='dask') for i in range(len(self))]
+        rst = da.stack(dask_arrays)
+        return rst
+
     @staticmethod
     def get_attr(tcf_io, path, attr_name, default = None):
         attr_value = tcf_io[path].attrs.get(attr_name, default = [default])[0]
