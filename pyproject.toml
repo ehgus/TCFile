@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "TCFile"
-version = "2024.9"
+version = "2024.10"
 description = "Python package for handling TCF data. It works with Tomcube data"
 readme = "README.md"
 requires-python = ">=3.7,<4"
