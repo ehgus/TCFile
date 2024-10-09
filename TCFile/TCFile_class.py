@@ -15,7 +15,7 @@ def TCFile(tcfname:str, imgtype):
         return TCFileBF(tcfname)
     if imgtype == '3DFL':
         return TCFileFL3D(tcfname)
-    ValueError('Unsupported imgtype: Supported imgtypes are "3D","2DMIP", and "BF"')
+    raise ValueError('Unsupported imgtype: Supported imgtypes are "3D","2DMIP", and "BF"')
 
 class TCFileAbstract(Sequence):
     '''
