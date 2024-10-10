@@ -23,7 +23,8 @@ dependencies = [
     "numpy>=1.18.5,<2",
     "h5py>=3.2.0,<4",
     "pillow>=9.5.0,<10",
-    "hdf5plugin>=4.4,<5"
+    "hdf5plugin>=4.4,<5",
+    "dask"
 ]
 
 [project.urls]
