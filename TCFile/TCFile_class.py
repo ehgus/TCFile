@@ -169,8 +169,10 @@ class TCFileRIAbstract(TCFileAbstract):
     def __getitem__(self, key: int, array_type = 'numpy') -> np.ndarray:
         if array_type == 'numpy':
             into_array = np.asarray
+            zeros = np.zeros
         elif array_type == 'dask':
             into_array = da.from_array
+            zeros = da.zeros
         else:
             raise TypeError('array_type must be either "numpy" or "dask"')
 
@@ -185,20 +187,20 @@ class TCFileRIAbstract(TCFileAbstract):
                 data = data.astype(np.float32)
                 data /= 1e4
             except:
+                warnings.warn(("You use an experimental file format deprecated.\n"
+                               "Update your reconstruction program and rebuild TCF file."))
                 if into_array == 'dask':
                     raise ValueError('"dask" does not support this TCFile')
                 with h5py.File(self.tcfname) as tcf_io:
                     get_data_attr = lambda attr_name: self.get_attr(tcf_io, data_path, attr_name)
-                    warnings.warn(("You use an experimental file format deprecated.\n"
-                                   "Update your reconstruction program and rebuild TCF file."))
                     # RI = data/1e3 + min_RI for uint8 data type (ScalarType True)
                     # RI = data/1e4          for uint16 data type (ScalarType False)
                     is_uint8 = get_data_attr('ScalarType')
                     if is_uint8:
-                        data_type = np.uint8
+                        data_type = 'u1'
                     else:
-                        data_type = np.uint16
-                    data = np.zeros(self.data_shape, data_type)
+                        data_type = 'u2'
+                    data = zeros(self.data_shape, dtype=data_type)
                     tile_path_list = [ p for p in tcf_io[data_path].keys() if re.match(r'^TILE_\d+$', p)]
                     tile_path_list.sort()
                     for p in tile_path_list:
@@ -213,7 +215,7 @@ class TCFileRIAbstract(TCFileAbstract):
                         last_idx = list(get_tile_attr(f'DataIndexLastPoint{axis}') for axis in ('Z', 'Y', 'X')[3-self.data_ndim:])
                         mapping_range = tuple(slice(start,end + 1) for start, end in zip(offset, last_idx))
                         valid_data_range = tuple(slice(0,end - start + 1) for start, end in zip(offset, last_idx))
-                        data[mapping_range] += tcf_io[tile_path][valid_data_range]
+                        data[mapping_range] += into_array(h5py.File(self.tcfname)[tile_path])[valid_data_range]
                     data = data.astype(np.float32)
                     if is_uint8:
                         min_RI = get_data_attr('RIMin')
