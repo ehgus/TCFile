@@ -199,7 +199,7 @@ class TCFileRIAbstract(TCFileAbstract):
                     else:
                         data_type = np.uint16
                     data = np.zeros(self.data_shape, data_type)
-                    tile_path_list = [ p for p in tcf_io.keys() if re.match(r'^TILE_\d+$', p)]
+                    tile_path_list = [ p for p in tcf_io[data_path].keys() if re.match(r'^TILE_\d+$', p)]
                     tile_path_list.sort()
                     for p in tile_path_list:
                         tile_path = f'{data_path}/{p}'
