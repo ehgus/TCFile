@@ -7,7 +7,7 @@ import hdf5plugin
 import re
 import dask.array as da
 
-def TCFile(tcfname:str, imgtype):
+def TCFile(tcfname:str, imgtype, channel=0):
     if imgtype == '3D':
         return TCFileRI3D(tcfname)
     if imgtype == '2DMIP':
@@ -15,7 +15,7 @@ def TCFile(tcfname:str, imgtype):
     if imgtype == 'BF':
         return TCFileBF(tcfname)
     if imgtype == '3DFL':
-        return TCFileFL3D(tcfname)
+        return TCFileFL3D(tcfname, channel)
     raise ValueError('Unsupported imgtype: Supported imgtypes are "3D","2DMIP", and "BF"')
 
 class TCFileAbstract(Sequence):
@@ -248,21 +248,71 @@ class TCFileFL3D(TCFileAbstract):
     imgtype = '3DFL'
     data_ndim = 3
     channel = 0
-    def __init__(self, tcfname: str):
+
+    def __init__(self, tcfname: str, channel=0):
+        self.channel = channel
         super().__init__(tcfname)
-        with h5py.File(self.tcfname) as f:
+        with h5py.File(self.tcfname, 'r') as f:
             self.max_channels = self.get_attr(f, f'/Data/{self.imgtype}', 'Channels')
 
-    def __getitem__(self, key: int, array_type = 'numpy') -> np.ndarray:
+    def get_data_location(self, key: int) -> str:
+        length = len(self)
+        if not isinstance(key, int):
+            raise TypeError(f'{self.__class__} indices must be integer, not {type(key)}')
+        if key < -length or key >= length:
+            raise IndexError(f'{self.__class__} index out of range')
+        key = (key + length) % length
+        # Build the path with the correct channel:
+        return f'/Data/{self.imgtype}/CH{self.channel}/{key:06d}'
+
+    def __getitem__(self, key: int, array_type='numpy') -> np.ndarray:
         if array_type == 'numpy':
             into_array = np.asarray
+            zeros = np.zeros
         elif array_type == 'dask':
             into_array = da.from_array
+            zeros = da.zeros
         else:
             raise TypeError('array_type must be either "numpy" or "dask"')
-        self.imgtype = f'3DFL/CH{self.channel}'
-        data_path = self.get_data_location(key)
-        self.imgtype = '3DFL'
-        data = into_array(h5py.File(self.tcfname)[data_path]) 
-        return data
 
+        data_path = self.get_data_location(key)
+        with h5py.File(self.tcfname, 'r') as f:
+            obj = f[data_path]
+            # If it's a dataset, do a direct read:
+            if isinstance(obj, h5py.Dataset):
+                data = into_array(obj)
+                data = data.astype(np.float32)
+                data /= 1e4
+                return data
+            # Otherwise, if it's a group, do tile stitching:
+            elif isinstance(obj, h5py.Group):
+                # Prepare for stitching:
+                get_data_attr = lambda attr_name: self.get_attr(f, data_path, attr_name)
+                is_uint8 = get_data_attr('ScalarType')
+                # Use proper numpy dtypes:
+                data_type = np.uint8 if is_uint8 else np.uint16
+                data = zeros(self.data_shape, dtype=data_type)
+                tile_path_list = [p for p in obj.keys() if re.match(r'^TILE_\d+$', p)]
+                tile_path_list.sort()
+                for tile in tile_path_list:
+                    tile_path = f'{data_path}/{tile}'
+                    get_tile_attr = lambda attr_name: self.get_attr(f, tile_path, attr_name)
+                    if get_tile_attr('SamplingStep') != 1:
+                        continue  # skip unsupported tiles
+                    # For each axis, get the tile’s placement info:
+                    offset = [get_tile_attr(f'DataIndexOffsetPoint{axis}') for axis in ('Z', 'Y', 'X')[3-self.data_ndim:]]
+                    last_idx = [get_tile_attr(f'DataIndexLastPoint{axis}') for axis in ('Z', 'Y', 'X')[3-self.data_ndim:]]
+                    mapping_range = tuple(slice(o, l + 1) for o, l in zip(offset, last_idx))
+                    valid_range = tuple(slice(0, l - o + 1) for o, l in zip(offset, last_idx))
+                    tile_data = into_array(f[tile_path])[valid_range]
+                    data[mapping_range] += tile_data
+                data = data.astype(np.float32)
+                if is_uint8:
+                    # min_RI = get_data_attr('RIMin')
+                    data /= 1e3
+                    # data += min_RI
+                else:
+                    data /= 1e4
+                return data
+            else:
+                raise TypeError("Unexpected HDF5 object type at data_path")
