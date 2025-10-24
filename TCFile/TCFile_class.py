@@ -7,7 +7,7 @@ import hdf5plugin
 import re
 import dask.array as da
 
-def TCFile(tcfname:str, imgtype):
+def TCFile(tcfname:str, imgtype, channel=0):
     if imgtype == '3D':
         return TCFileRI3D(tcfname)
     if imgtype == '2DMIP':
@@ -15,8 +15,8 @@ def TCFile(tcfname:str, imgtype):
     if imgtype == 'BF':
         return TCFileBF(tcfname)
     if imgtype == '3DFL':
-        return TCFileFL3D(tcfname)
-    raise ValueError('Unsupported imgtype: Supported imgtypes are "3D","2DMIP", and "BF"')
+        return TCFileFL3D(tcfname, channel)
+    raise ValueError('Unsupported imgtype: Supported imgtypes are "3D", "2DMIP", "BF", and "3DFL"')
 
 class TCFileAbstract(Sequence):
     '''
@@ -247,8 +247,9 @@ class TCFileBF(TCFileAbstract):
 class TCFileFL3D(TCFileAbstract):
     imgtype = '3DFL'
     data_ndim = 3
-    channel = 0
-    def __init__(self, tcfname: str):
+
+    def __init__(self, tcfname: str, channel: int = 0):
+        self.channel = channel
         super().__init__(tcfname)
         with h5py.File(self.tcfname) as f:
             self.max_channels = self.get_attr(f, f'/Data/{self.imgtype}', 'Channels')
