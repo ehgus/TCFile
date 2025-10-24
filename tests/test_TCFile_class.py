@@ -9,7 +9,7 @@ class TestTCFile:
         try:
             TCFile(SAMPLE_TCF_FILE,'4D')
         except ValueError as e:
-            if e.args[0] != 'The imgtype is not supported':
+            if not e.args[0].startswith('Unsupported imgtype'):
                 raise e
     
     def test_read(self):
