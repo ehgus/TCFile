@@ -6,8 +6,17 @@ import warnings
 import hdf5plugin
 import re
 import dask.array as da
+import warnings
 
 def TCFile(tcfname:str, imgtype, channel=0):
+    warnings.warn(
+        "TCFile function is deprecated and will be removed by the end of 2026. "
+        "Please use TCFZarrStore from TCFile.zarr_store instead for a more flexible "
+        "and standards-compliant zarr interface. "
+        "Example: from TCFile.zarr_store import TCFZarrStore; store = TCFZarrStore('file.TCF')",
+        DeprecationWarning,
+        stacklevel=2
+    )
     if imgtype == '3D':
         return TCFileRI3D(tcfname)
     if imgtype == '2DMIP':
