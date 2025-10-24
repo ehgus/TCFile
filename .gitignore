@@ -23,3 +23,6 @@ dist
 *.egg-info
 # uv
 uv.lock
+# AI-based programming cache
+.claude
+.serena
