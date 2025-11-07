@@ -6,8 +6,17 @@ import warnings
 import hdf5plugin
 import re
 import dask.array as da
+import warnings
 
 def TCFile(tcfname:str, imgtype, channel=0):
+    warnings.warn(
+        "TCFile function is deprecated and will be removed by the end of 2026. "
+        "Please use TCFZarrStore from TCFile.zarr_store instead for a more flexible "
+        "and standards-compliant zarr interface. "
+        "Example: from TCFile.zarr_store import TCFZarrStore; store = TCFZarrStore('file.TCF')",
+        DeprecationWarning,
+        stacklevel=2
+    )
     if imgtype == '3D':
         return TCFileRI3D(tcfname)
     if imgtype == '2DMIP':
@@ -16,7 +25,7 @@ def TCFile(tcfname:str, imgtype, channel=0):
         return TCFileBF(tcfname)
     if imgtype == '3DFL':
         return TCFileFL3D(tcfname, channel)
-    raise ValueError('Unsupported imgtype: Supported imgtypes are "3D","2DMIP", and "BF"')
+    raise ValueError('Unsupported imgtype: Supported imgtypes are "3D", "2DMIP", "BF", and "3DFL"')
 
 class TCFileAbstract(Sequence):
     '''
@@ -247,9 +256,8 @@ class TCFileBF(TCFileAbstract):
 class TCFileFL3D(TCFileAbstract):
     imgtype = '3DFL'
     data_ndim = 3
-    channel = 0
 
-    def __init__(self, tcfname: str, channel=0):
+    def __init__(self, tcfname: str, channel: int = 0):
         self.channel = channel
         super().__init__(tcfname)
         with h5py.File(self.tcfname) as f:

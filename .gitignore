@@ -21,3 +21,8 @@ __pycache__
 dist
 # Egg metadata
 *.egg-info
+# uv
+uv.lock
+# AI-based programming cache
+.claude
+.serena
