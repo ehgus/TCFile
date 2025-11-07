@@ -252,7 +252,7 @@ class TCFileFL3D(TCFileAbstract):
     def __init__(self, tcfname: str, channel=0):
         self.channel = channel
         super().__init__(tcfname)
-        with h5py.File(self.tcfname, 'r') as f:
+        with h5py.File(self.tcfname) as f:
             self.max_channels = self.get_attr(f, f'/Data/{self.imgtype}', 'Channels')
 
     def get_data_location(self, key: int) -> str:
@@ -281,8 +281,6 @@ class TCFileFL3D(TCFileAbstract):
             # If it's a dataset, do a direct read:
             if isinstance(obj, h5py.Dataset):
                 data = into_array(obj)
-                data = data.astype(np.float32)
-                data /= 1e4
                 return data
             # Otherwise, if it's a group, do tile stitching:
             elif isinstance(obj, h5py.Group):
@@ -306,13 +304,6 @@ class TCFileFL3D(TCFileAbstract):
                     valid_range = tuple(slice(0, l - o + 1) for o, l in zip(offset, last_idx))
                     tile_data = into_array(f[tile_path])[valid_range]
                     data[mapping_range] += tile_data
-                data = data.astype(np.float32)
-                if is_uint8:
-                    # min_RI = get_data_attr('RIMin')
-                    data /= 1e3
-                    # data += min_RI
-                else:
-                    data /= 1e4
                 return data
             else:
                 raise TypeError("Unexpected HDF5 object type at data_path")
